@@ -19,6 +19,11 @@ const deck = [
 const keepOrder = () => 0.999999;
 
 describe('BattleEngine', () => {
+  it('rejects decks that cannot be split evenly', () => {
+    expect(() => new BattleEngine([], keepOrder)).toThrow('even number');
+    expect(() => new BattleEngine(deck.slice(0, 3), keepOrder)).toThrow('even number');
+  });
+
   it('deals an even deck between the player and AI', () => {
     const state = new BattleEngine(deck, keepOrder).getSnapshot();
     expect(state.playerCount).toBe(2);
@@ -47,6 +52,23 @@ describe('BattleEngine', () => {
     expect(engine.chooseAiStat()).toBe('agility');
   });
 
+  it('rejects actions outside their valid phase or chooser', () => {
+    const engine = new BattleEngine(deck, keepOrder);
+    expect(() => engine.chooseAiStat()).toThrow('AI can only choose');
+    expect(() => engine.advanceRound()).toThrow('only advance');
+
+    engine.selectStat('strength');
+    expect(() => engine.selectStat('speed')).toThrow('only be selected');
+    expect(() => engine.chooseAiStat()).toThrow('AI can only choose');
+  });
+
+  it('rejects a round when either deck is unexpectedly empty', () => {
+    const engine = new BattleEngine(deck, keepOrder);
+    const mutable = engine as unknown as { playerDeck: BattleCard[] };
+    mutable.playerDeck = [];
+    expect(() => engine.selectStat('strength')).toThrow('Both players need a card');
+  });
+
   it('places tied cards into the pot', () => {
     const tiedDeck = [
       card('player-1', 50, 10, 20),
@@ -67,5 +89,32 @@ describe('BattleEngine', () => {
     expect(final.phase).toBe('game-over');
     expect(final.gameWinner).toBe('player');
     expect(final.playerCount).toBe(2);
+  });
+
+  it('awards an outstanding tie pot to the surviving AI', () => {
+    const potDeck = [
+      card('player-1', 10, 20, 30),
+      card('player-2', 50, 40, 30),
+      card('ai-1', 90, 20, 30),
+      card('ai-2', 50, 60, 70),
+    ];
+    const engine = new BattleEngine(potDeck, keepOrder);
+    expect(engine.selectStat('strength').lastResult?.winner).toBe('ai');
+    engine.advanceRound();
+    expect(engine.selectStat('strength').lastResult?.winner).toBe('tie');
+    const final = engine.advanceRound();
+    expect(final.gameWinner).toBe('ai');
+    expect(final.aiCount).toBe(4);
+    expect(final.potCount).toBe(0);
+  });
+
+  it('declares a draw when the final two cards tie', () => {
+    const tiedPair = [card('player', 50, 20, 30), card('ai', 50, 80, 70)];
+    const engine = new BattleEngine(tiedPair, keepOrder);
+    engine.selectStat('strength');
+    const final = engine.advanceRound();
+    expect(final.phase).toBe('game-over');
+    expect(final.gameWinner).toBe('draw');
+    expect(final.potCount).toBe(2);
   });
 });

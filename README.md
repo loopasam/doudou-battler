@@ -21,7 +21,11 @@ Useful checks:
 
 ```bash
 npm test
+npm run test:coverage
 npm run build
+npm run test:e2e
 ```
 
-Every push to `main` is tested, built, and deployed to GitHub Pages.
+See the complete [test strategy](docs/TESTING.md). Pull requests and pushes to `main` are tested in GitHub Actions. A push to `main` is deployed to GitHub Pages only after the full test pipeline passes.
+
+New behavior is developed with the documented [red–green–refactor workflow](docs/TDD.md). Use `npm run tdd` for the fast unit loop and `npm run test:all` for the complete green gate.

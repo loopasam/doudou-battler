@@ -52,6 +52,7 @@ export class GameScene extends Phaser.Scene {
 
     const state = this.engine.getSnapshot();
     this.drawHeader(state);
+    this.updateAccessibleStatus(state);
 
     if (state.phase === 'game-over') {
       this.drawGameOver(state);
@@ -90,6 +91,35 @@ export class GameScene extends Phaser.Scene {
     }
     graphics.lineStyle(2, COLORS.line, 0.5);
     graphics.strokeRect(24, 24, 1232, 672);
+  }
+
+  private updateAccessibleStatus(state: GameSnapshot): void {
+    const status = document.querySelector<HTMLElement>('#game-status');
+    if (!status) return;
+
+    if (state.phase === 'game-over') {
+      const outcome = state.gameWinner === 'player'
+        ? 'You win.'
+        : state.gameWinner === 'ai'
+          ? 'AI wins.'
+          : 'The game is a draw.';
+      status.textContent = `Game over. ${outcome} Final score: you ${state.playerCount}, AI ${state.aiCount}.`;
+      return;
+    }
+
+    if (state.phase === 'resolved' && state.lastResult) {
+      const outcome = state.lastResult.winner === 'player'
+        ? 'You win the round.'
+        : state.lastResult.winner === 'ai'
+          ? 'AI wins the round.'
+          : 'The round is tied.';
+      const nextPicker = state.chooser === 'player' ? 'you' : 'AI';
+      status.textContent = `Round ${state.round} resolved. ${outcome} Next picker: ${nextPicker}.`;
+      return;
+    }
+
+    const picker = state.chooser === 'player' ? 'Your pick' : 'AI pick';
+    status.textContent = `Round ${state.round}. ${picker}. You have ${state.playerCount} cards and AI has ${state.aiCount} cards.`;
   }
 
   private drawHeader(state: GameSnapshot): void {

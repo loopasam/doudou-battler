@@ -1,0 +1,42 @@
+import { expect, test } from '@playwright/test';
+
+test('renders a battle and accepts a stat choice without runtime errors', async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on('pageerror', (error) => runtimeErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') runtimeErrors.push(message.text());
+  });
+
+  await page.goto('/doudou-battler/');
+  await expect(page).toHaveTitle('Doudou Battler');
+  const status = page.getByRole('status');
+  await expect(status).toHaveText('Round 1. Your pick. You have 10 cards and AI has 10 cards.');
+
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThan(300);
+  expect(box!.height).toBeGreaterThan(160);
+
+  await canvas.click({
+    position: {
+      x: Math.round(box!.width * 0.305),
+      y: Math.round(box!.height * 0.64),
+    },
+  });
+  await expect(status).toContainText('Round 1 resolved.');
+  await page.waitForTimeout(250);
+
+  await canvas.click({
+    position: {
+      x: Math.round(box!.width * 0.5),
+      y: Math.round(box!.height * 0.902),
+    },
+  });
+  await expect(status).toContainText('Round 2. AI pick.');
+  await expect(status).toContainText('Round 2 resolved.', { timeout: 10_000 });
+
+  await expect(canvas).toBeVisible();
+  expect(runtimeErrors).toEqual([]);
+});
