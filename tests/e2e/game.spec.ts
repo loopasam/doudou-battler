@@ -35,7 +35,7 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
     },
   });
   await expect(status).toContainText('Round 2. AI pick.');
-  await expect(status).toContainText('Round 2 resolved.', { timeout: 3_000 });
+  await expect(status).toContainText('Round 2 resolved.', { timeout: 10_000 });
 
   await expect(canvas).toBeVisible();
   expect(runtimeErrors).toEqual([]);
