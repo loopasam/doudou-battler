@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { GAME_LAYOUT, getStatRowCenter } from '../../src/game/rendering';
 
 test('renders a battle and accepts a stat choice without runtime errors', async ({ page }) => {
   const runtimeErrors: string[] = [];
@@ -21,17 +22,20 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
 
   await canvas.click({
     position: {
-      x: Math.round(box!.width * 0.305),
-      y: Math.round(box!.height * 0.64),
+      x: Math.round(box!.width * (GAME_LAYOUT.playerCardX / GAME_LAYOUT.width)),
+      y: Math.round(
+        box!.height * ((GAME_LAYOUT.cardY + getStatRowCenter(0)) / GAME_LAYOUT.height),
+      ),
     },
   });
+  await expect(status).toContainText('Revealing AI card.');
   await expect(status).toContainText('Round 1 resolved.');
   await page.waitForTimeout(250);
 
   await canvas.click({
     position: {
-      x: Math.round(box!.width * 0.5),
-      y: Math.round(box!.height * 0.902),
+      x: Math.round(box!.width * (GAME_LAYOUT.nextButtonX / GAME_LAYOUT.width)),
+      y: Math.round(box!.height * (GAME_LAYOUT.nextButtonY / GAME_LAYOUT.height)),
     },
   });
   await expect(status).toContainText('Round 2. AI pick.');

@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
 import { PLACEHOLDER_CARDS } from './cards';
 import { BattleEngine } from './engine';
+import { CARD_LAYOUT, GAME_LAYOUT, getStatRowCenter, getTextResolution } from './rendering';
 import { STAT_KEYS, type BattleCard, type GameSnapshot, type Side, type StatKey } from './types';
+
+interface RenderOptions {
+  revealAi?: boolean;
+  showResult?: boolean;
+}
 
 const COLORS = {
   background: 0x11100f,
@@ -20,6 +26,8 @@ const LABELS: Record<StatKey, string> = {
   speed: 'SPEED',
   agility: 'AGILITY',
 };
+
+const TEXT_RESOLUTION = getTextResolution();
 
 export class GameScene extends Phaser.Scene {
   private engine!: BattleEngine;
@@ -44,31 +52,51 @@ export class GameScene extends Phaser.Scene {
     this.render();
   }
 
-  private render(): void {
+  private render(options: RenderOptions = {}): void {
     this.ui?.destroy(true);
     this.ui = this.add.container(0, 0);
     this.playerCardView = undefined;
     this.aiCardView = undefined;
 
     const state = this.engine.getSnapshot();
+    const isResolved = state.phase === 'resolved';
+    const revealAi = options.revealAi ?? isResolved;
+    const showResult = options.showResult ?? isResolved;
     this.drawHeader(state);
-    this.updateAccessibleStatus(state);
+    this.updateAccessibleStatus(state, isResolved && !showResult);
 
     if (state.phase === 'game-over') {
       this.drawGameOver(state);
       return;
     }
 
-    const revealAi = state.phase === 'resolved';
     if (state.playerCard) {
-      this.playerCardView = this.drawCard(390, 390, state.playerCard, 'player', true, state);
+      this.playerCardView = this.drawCard(
+        GAME_LAYOUT.playerCardX,
+        GAME_LAYOUT.cardY,
+        state.playerCard,
+        'player',
+        true,
+        state,
+      );
     }
     if (state.aiCard) {
-      this.aiCardView = this.drawCard(890, 390, state.aiCard, 'ai', revealAi, state);
+      this.aiCardView = this.drawCard(
+        GAME_LAYOUT.aiCardX,
+        GAME_LAYOUT.cardY,
+        state.aiCard,
+        'ai',
+        revealAi,
+        state,
+      );
     }
 
     if (state.phase === 'resolved') {
-      this.drawRoundResult(state);
+      if (showResult) {
+        this.drawRoundResult(state);
+      } else {
+        this.drawRevealStatus();
+      }
     } else if (state.chooser === 'ai') {
       this.drawAiThinking();
       this.aiTimer = this.time.delayedCall(850, () => {
@@ -93,9 +121,14 @@ export class GameScene extends Phaser.Scene {
     graphics.strokeRect(24, 24, 1232, 672);
   }
 
-  private updateAccessibleStatus(state: GameSnapshot): void {
+  private updateAccessibleStatus(state: GameSnapshot, revealing = false): void {
     const status = document.querySelector<HTMLElement>('#game-status');
     if (!status) return;
+
+    if (revealing) {
+      status.textContent = `Round ${state.round}. Revealing AI card.`;
+      return;
+    }
 
     if (state.phase === 'game-over') {
       const outcome = state.gameWinner === 'player'
@@ -149,8 +182,8 @@ export class GameScene extends Phaser.Scene {
     this.ui.add(group);
     const accent = owner === 'player' ? COLORS.player : COLORS.ai;
 
-    const shadow = this.add.rectangle(10, 12, 318, 448, 0x000000, 0.3);
-    const body = this.add.rectangle(0, 0, 318, 448, COLORS.paper).setStrokeStyle(4, accent);
+    const shadow = this.add.rectangle(10, 12, 318, CARD_LAYOUT.height, 0x000000, 0.3);
+    const body = this.add.rectangle(0, 0, 318, CARD_LAYOUT.height, COLORS.paper).setStrokeStyle(4, accent);
     group.add([shadow, body]);
 
     if (!revealed) {
@@ -175,11 +208,11 @@ export class GameScene extends Phaser.Scene {
     group.add([ownerLabel, idLabel, artBox, cross, prototype, name]);
 
     STAT_KEYS.forEach((stat, index) => {
-      const rowY = 70 + index * 68;
+      const rowY = getStatRowCenter(index);
       const canChoose = owner === 'player' && state.phase === 'awaiting-choice' && state.chooser === 'player';
       const selected = state.lastResult?.stat === stat;
       const rowColor = selected ? accent : 0xebe5d9;
-      const row = this.add.rectangle(0, rowY, 268, 52, rowColor)
+      const row = this.add.rectangle(0, rowY, 268, CARD_LAYOUT.statRowHeight, rowColor)
         .setStrokeStyle(2, selected ? accent : COLORS.ink);
       const label = this.makeText(-118, rowY, LABELS[stat], 15, COLORS.ink).setOrigin(0, 0.5);
       const value = this.makeText(118, rowY, String(card.stats[stat]), 24, COLORS.ink).setOrigin(1, 0.5);
@@ -204,9 +237,46 @@ export class GameScene extends Phaser.Scene {
 
   private resolveRound(stat: StatKey): void {
     const state = this.engine.selectStat(stat);
+    this.playAiReveal(state);
+  }
+
+  private playAiReveal(state: GameSnapshot): void {
+    this.render({ revealAi: false, showResult: false });
+    const hiddenCard = this.aiCardView;
+    if (!hiddenCard) {
+      this.finishReveal(state);
+      return;
+    }
+
+    this.tweens.add({
+      targets: hiddenCard,
+      scaleX: 0.04,
+      duration: 360,
+      ease: 'Sine.In',
+      onComplete: () => {
+        this.cameras.main.flash(90, 255, 245, 220, false);
+        this.render({ revealAi: true, showResult: false });
+        const revealedCard = this.aiCardView;
+        if (!revealedCard) {
+          this.finishReveal(state);
+          return;
+        }
+
+        revealedCard.setScale(0.04, 1);
+        this.tweens.add({
+          targets: revealedCard,
+          scaleX: 1,
+          duration: 460,
+          ease: 'Back.Out',
+          onComplete: () => this.time.delayedCall(140, () => this.finishReveal(state)),
+        });
+      },
+    });
+  }
+
+  private finishReveal(state: GameSnapshot): void {
     this.render();
     this.cameras.main.shake(180, 0.009);
-    this.cameras.main.flash(90, 255, 245, 220, false);
 
     const winnerView = state.lastResult?.winner === 'player'
       ? this.playerCardView
@@ -224,6 +294,12 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
       });
     }
+  }
+
+  private drawRevealStatus(): void {
+    const panel = this.add.rectangle(640, 630, 250, 52, COLORS.panel, 0.96).setStrokeStyle(2, COLORS.accent);
+    this.ui.add(panel);
+    this.addUiText(640, 630, 'REVEALING...', 16, COLORS.accent).setOrigin(0.5);
   }
 
   private drawRoundResult(state: GameSnapshot): void {
@@ -313,10 +389,11 @@ export class GameScene extends Phaser.Scene {
     color: number,
   ): Phaser.GameObjects.Text {
     return this.add.text(x, y, content, {
-      fontFamily: 'Courier New, monospace',
+      fontFamily: 'Segoe UI, Arial, sans-serif',
       fontSize: `${size}px`,
       fontStyle: 'bold',
       color: `#${color.toString(16).padStart(6, '0')}`,
-    });
+      resolution: TEXT_RESOLUTION,
+    }).setResolution(TEXT_RESOLUTION);
   }
 }
