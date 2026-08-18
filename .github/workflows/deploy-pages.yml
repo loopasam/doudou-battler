@@ -1,4 +1,4 @@
-name: Test and deploy to GitHub Pages
+name: Red-green test and deploy
 
 on:
   push:
@@ -29,17 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests with coverage gates
-        run: npm run test:coverage
-
-      - name: Build production site
-        run: npm run build
-
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run browser smoke tests
-        run: npm run test:e2e
+      - name: Run full-stack green gate
+        run: npm run test:all
 
       - name: Upload browser diagnostics on failure
         if: failure()
@@ -76,3 +70,20 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  production-smoke:
+    if: github.event_name == 'push'
+    needs: deploy
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed document and bundle
+        shell: bash
+        run: |
+          site_url="https://loopasam.github.io/doudou-battler/"
+          html="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors "$site_url")"
+          grep --fixed-strings '<title>Doudou Battler</title>' <<< "$html"
+          asset_path="$(sed -n 's/.*src="\([^"]*\.js\)".*/\1/p' <<< "$html" | head -n 1)"
+          test -n "$asset_path"
+          curl --fail --silent --show-error --head --retry 5 --retry-all-errors "https://loopasam.github.io${asset_path}"
