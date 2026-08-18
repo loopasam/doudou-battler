@@ -1,0 +1,29 @@
+:root {
+  color: #f4f1e8;
+  background: #11100f;
+  font-family: "Courier New", Courier, monospace;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#game {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% 30%, #29241f 0%, #151311 44%, #0b0a09 100%);
+}
+
+canvas {
+  display: block;
+}
