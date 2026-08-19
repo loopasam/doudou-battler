@@ -7,8 +7,10 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  LOSER_REACTION_EMOJIS,
+  RESULT_EMOJI_STREAM,
   WINNER_CELEBRATION_POSES,
-  WINNER_FIREWORK_BURSTS,
+  WINNER_REACTION_EMOJIS,
   WINNER_RESULT_SWAY_POSES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -502,11 +504,12 @@ export class GameScene extends Phaser.Scene {
     if (winnerView) {
       this.cameras.main.shake(300, 0.012);
       const winnerColor = winner === 'player' ? COLORS.player : COLORS.ai;
-      this.drawWinnerFireworks(winnerView, winnerColor);
+      this.drawResultEmojiStream(winnerView, 'winner');
       this.drawWinnerCardGlow(winnerView, winnerColor);
 
       if (loserView) {
         const loserColor = winner === 'player' ? COLORS.ai : COLORS.player;
+        this.drawResultEmojiStream(loserView, 'loser');
         this.drawLoserReaction(loserView, loserColor);
         this.tweens.add({
           targets: loserView,
@@ -921,68 +924,84 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private drawWinnerFireworks(
+  private drawResultEmojiStream(
     group: Phaser.GameObjects.Container,
-    color: number,
+    outcome: 'winner' | 'loser',
   ): void {
-    const fireworks = this.add.container(group.x, group.y);
-    this.ui.addAt(fireworks, 0);
+    const isWinner = outcome === 'winner';
+    const emojis = isWinner ? WINNER_REACTION_EMOJIS : LOSER_REACTION_EMOJIS;
+    const particleCount = isWinner
+      ? RESULT_EMOJI_STREAM.winnerParticles
+      : RESULT_EMOJI_STREAM.loserParticles;
+    const staggerMs = isWinner
+      ? RESULT_EMOJI_STREAM.winnerStaggerMs
+      : RESULT_EMOJI_STREAM.loserStaggerMs;
+    const durationMs = isWinner
+      ? RESULT_EMOJI_STREAM.winnerDurationMs
+      : RESULT_EMOJI_STREAM.loserDurationMs;
+    const stream = this.add.container(group.x, group.y);
+    this.ui.addAt(stream, 0);
 
-    WINNER_FIREWORK_BURSTS.forEach((config, burstIndex) => {
-      const burst = this.add.container(config.offsetX, config.offsetY)
-        .setAlpha(0)
-        .setScale(0.18);
-      const rays = this.add.graphics();
+    for (let index = 0; index < particleCount; index += 1) {
+      let startX: number;
+      let startY: number;
+      let endX: number;
+      let endY: number;
+      let curveX: number;
+      let curveY: number;
 
-      for (let rayIndex = 0; rayIndex < 10; rayIndex += 1) {
-        const angle = (Math.PI * 2 * rayIndex) / 10;
-        const innerRadius = 10;
-        const outerRadius = rayIndex % 2 === 0 ? 38 : 29;
-        const rayColor = rayIndex % 2 === 0 ? color : COLORS.paper;
-        rays.lineStyle(rayIndex % 2 === 0 ? 3 : 2, rayColor, 0.9);
-        rays.lineBetween(
-          Math.cos(angle) * innerRadius,
-          Math.sin(angle) * innerRadius,
-          Math.cos(angle) * outerRadius,
-          Math.sin(angle) * outerRadius,
-        );
-        rays.fillStyle(rayColor, 0.95);
-        rays.fillCircle(
-          Math.cos(angle) * (outerRadius + 5),
-          Math.sin(angle) * (outerRadius + 5),
-          rayIndex % 2 === 0 ? 3.5 : 2.5,
-        );
+      if (isWinner) {
+        const lane = index % 6;
+        const angle = -Math.PI * 0.85 + lane * ((Math.PI * 1.7) / 5);
+        const curve = (index % 2 === 0 ? 1 : -1) * (24 + (index % 3) * 8);
+        startX = Math.cos(angle) * 126;
+        startY = Math.sin(angle) * 174;
+        endX = Math.cos(angle) * 250;
+        endY = Math.sin(angle) * 292;
+        curveX = -Math.sin(angle) * curve;
+        curveY = Math.cos(angle) * curve;
+      } else {
+        const lane = index % 5;
+        const laneOffset = (lane - 2) * 48;
+        startX = laneOffset * 0.7;
+        startY = -142 + (index % 2) * 30;
+        endX = laneOffset * 1.55 + (index % 2 === 0 ? -22 : 22);
+        endY = -292 + (index % 3) * 18;
+        curveX = index % 2 === 0 ? -28 : 28;
+        curveY = 0;
       }
 
-      const ring = this.add.circle(0, 0, 8, COLORS.panel, 0)
-        .setStrokeStyle(3, color, 0.9);
-      burst.add([rays, ring]);
-      fireworks.add(burst);
+      let emojiIndex = index % emojis.length;
+      const emoji = this.makeEmojiText(
+        startX,
+        startY,
+        emojis[emojiIndex],
+        isWinner ? 38 : 32,
+      ).setOrigin(0.5).setAlpha(0).setScale(isWinner ? 0.58 : 0.5);
+      stream.add(emoji);
 
-      this.tweens.add({
-        targets: burst,
-        alpha: 1,
-        scaleX: config.scale,
-        scaleY: config.scale,
-        angle: burstIndex % 2 === 0 ? 8 : -8,
-        delay: config.delayMs,
-        duration: 290,
-        ease: 'Back.Out',
-        onComplete: () => {
-          this.tweens.add({
-            targets: burst,
-            alpha: 0.34,
-            scaleX: config.scale * 0.88,
-            scaleY: config.scale * 0.88,
-            angle: burstIndex % 2 === 0 ? -5 : 5,
-            duration: 360 + burstIndex * 43,
-            ease: 'Sine.InOut',
-            yoyo: true,
-            repeat: -1,
-          });
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        delay: index * staggerMs,
+        duration: durationMs,
+        repeat: -1,
+        onRepeat: () => {
+          emojiIndex = (emojiIndex + 1) % emojis.length;
+          emoji.setText(emojis[emojiIndex]);
+        },
+        onUpdate: (tween) => {
+          const progress = Number(tween.getValue());
+          const arc = Math.sin(Math.PI * progress);
+          emoji.x = startX + (endX - startX) * progress + curveX * arc;
+          emoji.y = startY + (endY - startY) * progress + curveY * arc;
+          emoji.alpha = Math.pow(arc, 0.7);
+          const scale = (isWinner ? 0.58 : 0.5) + arc * (isWinner ? 0.5 : 0.34);
+          emoji.setScale(scale);
+          emoji.setAngle((isWinner ? 360 : 95) * (index % 2 === 0 ? 1 : -1) * progress);
         },
       });
-    });
+    }
   }
 
   private drawLoserReaction(
@@ -1140,6 +1159,21 @@ export class GameScene extends Phaser.Scene {
       fontSize: `${size}px`,
       fontStyle: 'bold',
       color: `#${color.toString(16).padStart(6, '0')}`,
+      resolution: TEXT_RESOLUTION,
+    }).setResolution(TEXT_RESOLUTION);
+  }
+
+  private makeEmojiText(
+    x: number,
+    y: number,
+    content: string,
+    size: number,
+  ): Phaser.GameObjects.Text {
+    return this.add.text(x, y, content, {
+      fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
+      fontSize: `${size}px`,
+      fontStyle: 'normal',
+      color: '#ffffff',
       resolution: TEXT_RESOLUTION,
     }).setResolution(TEXT_RESOLUTION);
   }

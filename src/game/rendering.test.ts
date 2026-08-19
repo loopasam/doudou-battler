@@ -5,8 +5,10 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  LOSER_REACTION_EMOJIS,
+  RESULT_EMOJI_STREAM,
   WINNER_CELEBRATION_POSES,
-  WINNER_FIREWORK_BURSTS,
+  WINNER_REACTION_EMOJIS,
   WINNER_RESULT_SWAY_POSES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -121,17 +123,31 @@ describe('wireframe rendering metrics', () => {
     expect(swayDurations.reduce((total, duration) => total + duration, 0)).toBeGreaterThanOrEqual(1_500);
   });
 
-  it('places staggered fireworks around every side of the winning card', () => {
-    const offsetsX = WINNER_FIREWORK_BURSTS.map(({ offsetX }) => offsetX);
-    const offsetsY = WINNER_FIREWORK_BURSTS.map(({ offsetY }) => offsetY);
-    const delays = WINNER_FIREWORK_BURSTS.map(({ delayMs }) => delayMs);
+  it('uses six familiar and distinct emotional emojis for each outcome', () => {
+    expect(WINNER_REACTION_EMOJIS).toHaveLength(6);
+    expect(LOSER_REACTION_EMOJIS).toHaveLength(6);
+    expect(new Set(WINNER_REACTION_EMOJIS).size).toBe(6);
+    expect(new Set(LOSER_REACTION_EMOJIS).size).toBe(6);
+    expect(WINNER_REACTION_EMOJIS).toContain('🥳');
+    expect(LOSER_REACTION_EMOJIS).toContain('😤');
+    const loserEmojis = new Set<string>(LOSER_REACTION_EMOJIS);
+    expect(WINNER_REACTION_EMOJIS.some((emoji) => loserEmojis.has(emoji)))
+      .toBe(false);
+  });
 
-    expect(WINNER_FIREWORK_BURSTS.length).toBeGreaterThanOrEqual(5);
-    expect(offsetsX.some((offset) => offset < 0)).toBe(true);
-    expect(offsetsX.some((offset) => offset > 0)).toBe(true);
-    expect(offsetsY.some((offset) => offset < 0)).toBe(true);
-    expect(offsetsY.some((offset) => offset > 0)).toBe(true);
-    expect(new Set(delays).size).toBe(WINNER_FIREWORK_BURSTS.length);
+  it('overlaps staggered emoji cycles to create constant winner and loser streams', () => {
+    expect(RESULT_EMOJI_STREAM.winnerParticles).toBeGreaterThanOrEqual(
+      WINNER_REACTION_EMOJIS.length,
+    );
+    expect(RESULT_EMOJI_STREAM.loserParticles).toBeGreaterThanOrEqual(
+      LOSER_REACTION_EMOJIS.length,
+    );
+    expect(
+      (RESULT_EMOJI_STREAM.winnerParticles - 1) * RESULT_EMOJI_STREAM.winnerStaggerMs,
+    ).toBeLessThan(RESULT_EMOJI_STREAM.winnerDurationMs);
+    expect(
+      (RESULT_EMOJI_STREAM.loserParticles - 1) * RESULT_EMOJI_STREAM.loserStaggerMs,
+    ).toBeLessThan(RESULT_EMOJI_STREAM.loserDurationMs);
   });
 
   it('deals each next card from its own deck along an inward arc', () => {

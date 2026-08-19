@@ -54,14 +54,17 @@ export const WINNER_RESULT_SWAY_POSES = [
   { offsetX: 1, offsetY: 0, angle: 1.1, scale: 1.055, durationMs: 610 },
 ] as const;
 
-export const WINNER_FIREWORK_BURSTS = [
-  { offsetX: -188, offsetY: -162, delayMs: 0, scale: 1 },
-  { offsetX: 188, offsetY: -150, delayMs: 120, scale: 0.92 },
-  { offsetX: -192, offsetY: 118, delayMs: 240, scale: 0.86 },
-  { offsetX: 190, offsetY: 126, delayMs: 60, scale: 1.04 },
-  { offsetX: -180, offsetY: -8, delayMs: 300, scale: 0.76 },
-  { offsetX: 182, offsetY: 18, delayMs: 180, scale: 0.8 },
-] as const;
+export const WINNER_REACTION_EMOJIS = ['🥳', '🤩', '😄', '🏆', '⭐', '🙌'] as const;
+export const LOSER_REACTION_EMOJIS = ['😤', '😖', '😢', '😩', '💨', '💢'] as const;
+
+export const RESULT_EMOJI_STREAM = {
+  winnerParticles: 12,
+  loserParticles: 9,
+  winnerStaggerMs: 140,
+  loserStaggerMs: 180,
+  winnerDurationMs: 1_900,
+  loserDurationMs: 2_100,
+} as const;
 
 export interface CardBorderPoint {
   x: number;
