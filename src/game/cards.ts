@@ -1,26 +1,29 @@
 import type { BattleCard } from './types';
 
+// Each category uses the same ten levels twice. Card totals stay within five points
+// of one another, while every card still has a gap of at least 20 between its
+// specialty and weakness.
 const statLines: Array<[number, number, number]> = [
-  [86, 34, 48],
-  [44, 91, 63],
-  [62, 57, 88],
-  [73, 76, 39],
-  [51, 68, 82],
-  [95, 29, 42],
-  [38, 84, 74],
-  [69, 45, 93],
-  [78, 61, 55],
-  [57, 96, 36],
-  [83, 52, 67],
-  [47, 73, 90],
-  [92, 41, 59],
-  [64, 87, 46],
-  [55, 64, 79],
-  [88, 48, 71],
-  [41, 79, 85],
-  [76, 56, 94],
-  [67, 89, 51],
-  [59, 70, 77],
+  [40, 60, 85],
+  [45, 65, 75],
+  [50, 85, 55],
+  [55, 75, 60],
+  [60, 45, 85],
+  [65, 40, 80],
+  [70, 50, 65],
+  [75, 45, 65],
+  [80, 70, 40],
+  [85, 55, 50],
+  [40, 80, 70],
+  [45, 60, 80],
+  [50, 65, 70],
+  [55, 85, 50],
+  [60, 55, 75],
+  [65, 75, 45],
+  [70, 80, 40],
+  [75, 70, 45],
+  [80, 50, 55],
+  [85, 40, 60],
 ];
 
 export const PLACEHOLDER_CARDS: BattleCard[] = statLines.map(
