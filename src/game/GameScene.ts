@@ -5,7 +5,7 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
-  getCardBorderLightPositions,
+  getCardBorderTrailPoint,
   getDeckCountsBeforeTransfer,
   getRoundWinnerLabel,
   getStatRowCenter,
@@ -302,7 +302,7 @@ export class GameScene extends Phaser.Scene {
     const active = state.phase === 'awaiting-choice' && state.chooser === owner;
 
     if (active) {
-      this.drawActiveCardLights(group, owner, accent);
+      this.drawActiveCardTrail(group, owner, accent);
     }
 
     const shadow = this.add.rectangle(10, 12, CARD_LAYOUT.width, CARD_LAYOUT.height, 0x000000, 0.3);
@@ -640,7 +640,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: panel, alpha: 0.55, duration: 260, yoyo: true, repeat: -1 });
   }
 
-  private drawActiveCardLights(
+  private drawActiveCardTrail(
     group: Phaser.GameObjects.Container,
     owner: Side,
     accent: number,
@@ -666,27 +666,41 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    getCardBorderLightPositions().forEach((position, index) => {
-      const bulbColor = index % 3 === 0
-        ? COLORS.paper
-        : index % 3 === 1
-          ? accent
-          : COLORS.accent;
-      const bulb = this.add.circle(position.x, position.y, index % 3 === 0 ? 4.5 : 3.5, bulbColor, 0.28)
-        .setStrokeStyle(1, COLORS.ink, 0.7)
-        .setBlendMode(Phaser.BlendModes.ADD);
-      group.add(bulb);
-      this.tweens.add({
-        targets: bulb,
-        alpha: 1,
-        scaleX: 1.55,
-        scaleY: 1.55,
-        delay: index * 42,
-        duration: 460,
-        ease: 'Sine.InOut',
-        yoyo: true,
-        repeat: -1,
-      });
+    const segmentCount = 16;
+    const trail = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    const head = this.add.circle(0, 0, 6.5, accent)
+      .setStrokeStyle(2, COLORS.paper, 0.88)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    group.add([trail, head]);
+
+    const drawTrail = (progress: number): void => {
+      const points = Array.from(
+        { length: segmentCount },
+        (_, index) => getCardBorderTrailPoint(progress - index * 0.0055),
+      );
+      trail.clear();
+      for (let index = segmentCount - 2; index >= 0; index -= 1) {
+        const strength = 1 - index / (segmentCount - 1);
+        trail.lineStyle(2.5 + strength * 5.5, accent, 0.12 + strength * 0.82);
+        trail.lineBetween(
+          points[index].x,
+          points[index].y,
+          points[index + 1].x,
+          points[index + 1].y,
+        );
+      }
+      head.setPosition(points[0].x, points[0].y);
+    };
+
+    drawTrail(0);
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 2_250,
+      repeat: -1,
+      onUpdate: (tween) => {
+        drawTrail(Number(tween.getValue()));
+      },
     });
 
     const turnTag = this.add.rectangle(0, -260, 226, 34, COLORS.panel, 0.98)

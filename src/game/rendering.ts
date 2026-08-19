@@ -25,7 +25,7 @@ export const GAME_TIMING = {
   aiThinkMs: 1_550,
 } as const;
 
-export interface CardBorderLightPosition {
+export interface CardBorderPoint {
   x: number;
   y: number;
 }
@@ -43,23 +43,30 @@ export function getLastStatRowBottom(): number {
   return getStatRowCenter(CARD_LAYOUT.statRowCount - 1) + CARD_LAYOUT.statRowHeight / 2;
 }
 
-export function getCardBorderLightPositions(): CardBorderLightPosition[] {
+export function getCardBorderTrailPoint(progress: number): CardBorderPoint {
   const outerX = CARD_LAYOUT.width / 2 + 10;
   const outerY = CARD_LAYOUT.height / 2 + 10;
-  const segments = 9;
-  const positions: CardBorderLightPosition[] = [];
+  const width = outerX * 2;
+  const height = outerY * 2;
+  const perimeter = (width + height) * 2;
+  let distance = (((progress % 1) + 1) % 1) * perimeter;
 
-  for (let index = 0; index <= segments; index += 1) {
-    const x = -outerX + (outerX * 2 * index) / segments;
-    positions.push({ x, y: -outerY }, { x, y: outerY });
+  if (distance <= width) {
+    return { x: -outerX + distance, y: -outerY };
   }
 
-  for (let index = 1; index < segments; index += 1) {
-    const y = -outerY + (outerY * 2 * index) / segments;
-    positions.push({ x: -outerX, y }, { x: outerX, y });
+  distance -= width;
+  if (distance <= height) {
+    return { x: outerX, y: -outerY + distance };
   }
 
-  return positions;
+  distance -= height;
+  if (distance <= width) {
+    return { x: outerX - distance, y: outerY };
+  }
+
+  distance -= width;
+  return { x: -outerX, y: outerY - distance };
 }
 
 export function getRoundWinnerLabel(winner: 'player' | 'ai' | 'tie'): string {

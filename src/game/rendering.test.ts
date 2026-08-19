@@ -3,7 +3,7 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
-  getCardBorderLightPositions,
+  getCardBorderTrailPoint,
   getDeckCountsBeforeTransfer,
   getLastStatRowBottom,
   getRoundWinnerLabel,
@@ -42,14 +42,14 @@ describe('wireframe rendering metrics', () => {
     );
   });
 
-  it('places a continuous light trail just outside the active card', () => {
-    const lights = getCardBorderLightPositions();
+  it('loops a snake trail continuously around the active card border', () => {
     const outerX = CARD_LAYOUT.width / 2 + 10;
     const outerY = CARD_LAYOUT.height / 2 + 10;
+    const samples = Array.from({ length: 101 }, (_, index) => getCardBorderTrailPoint(index / 100));
 
-    expect(lights.length).toBeGreaterThanOrEqual(32);
-    for (const light of lights) {
-      expect(Math.abs(light.x) === outerX || Math.abs(light.y) === outerY).toBe(true);
+    expect(samples[0]).toEqual(samples.at(-1));
+    for (const point of samples) {
+      expect(Math.abs(point.x) === outerX || Math.abs(point.y) === outerY).toBe(true);
     }
   });
 
