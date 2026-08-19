@@ -90,7 +90,9 @@ export class BattleEngine {
     }
 
     this.lastResult = { stat, winner, playerCard, aiCard, capturedCount };
-    this.chooser = this.chooser === 'player' ? 'ai' : 'player';
+    if (winner !== 'tie') {
+      this.chooser = winner;
+    }
     this.phase = 'resolved';
     return this.getSnapshot();
   }

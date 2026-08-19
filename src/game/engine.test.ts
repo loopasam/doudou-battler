@@ -31,23 +31,31 @@ describe('BattleEngine', () => {
     expect(state.chooser).toBe('player');
   });
 
-  it('awards the cards to the higher stat and alternates chooser', () => {
+  it('awards the cards to the higher stat and lets the winner choose again', () => {
     const engine = new BattleEngine(deck, keepOrder);
     const result = engine.selectStat('strength');
     expect(result.lastResult?.winner).toBe('player');
     expect(result.playerCount).toBe(3);
     expect(result.aiCount).toBe(1);
-    expect(result.chooser).toBe('ai');
+    expect(result.chooser).toBe('player');
 
     const next = engine.advanceRound();
     expect(next.phase).toBe('awaiting-choice');
     expect(next.round).toBe(2);
-    expect(next.chooser).toBe('ai');
+    expect(next.chooser).toBe('player');
   });
 
   it('lets the AI select its strongest visible stat', () => {
-    const engine = new BattleEngine(deck, keepOrder);
-    engine.selectStat('strength');
+    const aiWinningDeck = [
+      card('player-1', 10, 20, 30),
+      card('player-2', 40, 80, 50),
+      card('ai-1', 90, 70, 40),
+      card('ai-2', 50, 30, 95),
+    ];
+    const engine = new BattleEngine(aiWinningDeck, keepOrder);
+    const result = engine.selectStat('strength');
+    expect(result.lastResult?.winner).toBe('ai');
+    expect(result.chooser).toBe('ai');
     engine.advanceRound();
     expect(engine.chooseAiStat()).toBe('agility');
   });
@@ -78,6 +86,7 @@ describe('BattleEngine', () => {
     ];
     const result = new BattleEngine(tiedDeck, keepOrder).selectStat('strength');
     expect(result.lastResult?.winner).toBe('tie');
+    expect(result.chooser).toBe('player');
     expect(result.potCount).toBe(2);
   });
 

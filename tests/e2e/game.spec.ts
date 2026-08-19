@@ -30,6 +30,8 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
   });
   await expect(status).toContainText('Revealing AI card.');
   await expect(status).toContainText('Round 1 resolved.');
+  const roundOneResult = await status.textContent();
+  const aiControlsRoundTwo = roundOneResult?.includes('AI wins the round.') ?? false;
 
   await canvas.click({
     position: {
@@ -41,7 +43,21 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
     /Round 1\. Moving cards to (your deck|the AI deck|the pot)\./,
     { timeout: 10_000 },
   );
-  await expect(status).toContainText('Round 2. AI pick.');
+  await expect(status).toContainText(
+    aiControlsRoundTwo ? 'Round 2. AI pick.' : 'Round 2. Your pick.',
+  );
+
+  if (!aiControlsRoundTwo) {
+    await canvas.click({
+      position: {
+        x: Math.round(box!.width * (GAME_LAYOUT.playerCardX / GAME_LAYOUT.width)),
+        y: Math.round(
+          box!.height * ((GAME_LAYOUT.cardY + getStatRowCenter(0)) / GAME_LAYOUT.height),
+        ),
+      },
+    });
+  }
+
   await expect(status).toContainText('Round 2 resolved.', { timeout: 10_000 });
 
   await expect(canvas).toBeVisible();
