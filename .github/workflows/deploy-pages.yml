@@ -87,3 +87,10 @@ jobs:
           asset_path="$(sed -n 's/.*src="\([^"]*\.js\)".*/\1/p' <<< "$html" | head -n 1)"
           test -n "$asset_path"
           curl --fail --silent --show-error --head --retry 5 --retry-all-errors "https://loopasam.github.io${asset_path}"
+
+          studio_url="${site_url}studio/"
+          studio_html="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors "$studio_url")"
+          grep --fixed-strings '<title>Doudou Art Lab</title>' <<< "$studio_html"
+          grep --fixed-strings 'From cuddle' <<< "$studio_html"
+          curl --fail --silent --show-error --head --retry 5 --retry-all-errors "${site_url}art-studio/doudou-original.webp"
+          curl --fail --silent --show-error --head --retry 5 --retry-all-errors "${site_url}art-studio/fort-knight-concept.png"
