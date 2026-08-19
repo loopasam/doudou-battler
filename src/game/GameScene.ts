@@ -296,8 +296,9 @@ export class GameScene extends Phaser.Scene {
     this.ui.add(group);
     const accent = owner === 'player' ? COLORS.player : COLORS.ai;
 
-    const shadow = this.add.rectangle(10, 12, 318, CARD_LAYOUT.height, 0x000000, 0.3);
-    const body = this.add.rectangle(0, 0, 318, CARD_LAYOUT.height, COLORS.paper).setStrokeStyle(4, accent);
+    const shadow = this.add.rectangle(10, 12, CARD_LAYOUT.width, CARD_LAYOUT.height, 0x000000, 0.3);
+    const body = this.add.rectangle(0, 0, CARD_LAYOUT.width, CARD_LAYOUT.height, COLORS.paper)
+      .setStrokeStyle(4, accent);
     group.add([shadow, body]);
 
     if (!revealed) {
@@ -542,13 +543,23 @@ export class GameScene extends Phaser.Scene {
         ? COLORS.ai
         : COLORS.accent;
 
-    const panel = this.add.rectangle(640, 630, 330, 92, COLORS.panel, 0.97).setStrokeStyle(3, resultColor);
+    const panel = this.add.rectangle(640, 630, 330, 62, COLORS.panel, 0.97)
+      .setStrokeStyle(3, resultColor);
     this.ui.add(panel);
-    this.addUiText(640, 608, resultText, 19, resultColor).setOrigin(0.5);
-    this.makeButton(640, 650, 190, 34, 'NEXT ROUND  >', COLORS.paper, () => {
+    this.addUiText(640, 630, resultText, 19, resultColor).setOrigin(0.5);
+
+    const actionLabel = state.chooser === 'ai' ? 'START\nAI' : 'NEXT\nROUND';
+    this.makeCircleButton(
+      GAME_LAYOUT.nextButtonX,
+      GAME_LAYOUT.nextButtonY,
+      GAME_LAYOUT.nextButtonRadius,
+      actionLabel,
+      resultColor,
+      () => {
       this.engine.advanceRound();
       this.render();
-    });
+      },
+    );
   }
 
   private drawAiThinking(): void {
@@ -592,6 +603,52 @@ export class GameScene extends Phaser.Scene {
       text.setScale(1);
     });
     button.on('pointerdown', action);
+  }
+
+  private makeCircleButton(
+    x: number,
+    y: number,
+    radius: number,
+    label: string,
+    color: number,
+    action: () => void,
+  ): void {
+    const shadow = this.add.circle(x + 7, y + 9, radius, 0x000000, 0.38);
+    const ring = this.add.circle(x, y, radius + 9, COLORS.panel, 0)
+      .setStrokeStyle(2, color, 0.72);
+    const button = this.add.circle(x, y, radius, color).setStrokeStyle(4, COLORS.ink);
+    const text = this.makeText(x, y - 3, label, 15, COLORS.ink)
+      .setOrigin(0.5)
+      .setAlign('center')
+      .setLineSpacing(2);
+    const arrow = this.makeText(x, y + 37, '›', 23, COLORS.ink).setOrigin(0.5);
+    this.ui.add([shadow, ring, button, text, arrow]);
+
+    button.setInteractive({ useHandCursor: true });
+    button.on('pointerover', () => {
+      button.setScale(1.06);
+      text.setScale(1.06);
+      arrow.setScale(1.06);
+      ring.setScale(1.08).setAlpha(1);
+    });
+    button.on('pointerout', () => {
+      button.setScale(1);
+      text.setScale(1);
+      arrow.setScale(1);
+      ring.setScale(1).setAlpha(0.72);
+    });
+    button.on('pointerdown', action);
+
+    this.tweens.add({
+      targets: ring,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      alpha: 0.16,
+      duration: 820,
+      ease: 'Sine.Out',
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   private addUiText(

@@ -1,4 +1,5 @@
 export const CARD_LAYOUT = {
+  width: 318,
   height: 448,
   statRowHeight: 48,
   statRowStart: 61,
@@ -16,7 +17,8 @@ export const GAME_LAYOUT = {
   aiDeckX: 1172,
   deckY: 360,
   nextButtonX: 640,
-  nextButtonY: 650,
+  nextButtonY: 360,
+  nextButtonRadius: 66,
 } as const;
 
 export interface DeckCounts {
