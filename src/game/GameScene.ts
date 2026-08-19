@@ -508,9 +508,7 @@ export class GameScene extends Phaser.Scene {
       this.drawWinnerCardGlow(winnerView, winnerColor);
 
       if (loserView) {
-        const loserColor = winner === 'player' ? COLORS.ai : COLORS.player;
         this.drawResultEmojiStream(loserView, 'loser');
-        this.drawLoserReaction(loserView, loserColor);
         this.tweens.add({
           targets: loserView,
           alpha: 0.46,
@@ -1002,55 +1000,6 @@ export class GameScene extends Phaser.Scene {
         },
       });
     }
-  }
-
-  private drawLoserReaction(
-    group: Phaser.GameObjects.Container,
-    color: number,
-  ): void {
-    const direction = group.x < GAME_LAYOUT.width / 2 ? 1 : -1;
-    const reaction = this.add.container(group.x + direction * 108, group.y - 164)
-      .setAlpha(0)
-      .setScale(0.25);
-    this.ui.add(reaction);
-
-    const badge = this.add.circle(0, 0, 42, COLORS.panel, 0.98)
-      .setStrokeStyle(4, color, 0.95);
-    const face = this.add.circle(0, 0, 30, COLORS.paper, 0.96)
-      .setStrokeStyle(2, COLORS.ink, 0.9);
-    const leftEye = this.add.circle(-9, -7, 3.5, COLORS.ink);
-    const rightEye = this.add.circle(9, -7, 3.5, COLORS.ink);
-    const expression = this.add.graphics();
-    expression.lineStyle(3, COLORS.ink, 1);
-    expression.lineBetween(-15, -15, -7, -12);
-    expression.lineBetween(15, -15, 7, -12);
-    expression.beginPath();
-    expression.arc(0, 14, 14, Math.PI, Math.PI * 2, false);
-    expression.strokePath();
-
-    const labelPanel = this.add.rectangle(0, 53, 88, 25, COLORS.panel, 0.98)
-      .setStrokeStyle(2, color, 0.9);
-    const label = this.makeText(0, 53, 'OH NO...', 11, color).setOrigin(0.5);
-    reaction.add([badge, face, leftEye, rightEye, expression, labelPanel, label]);
-
-    this.tweens.add({
-      targets: reaction,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 360,
-      ease: 'Back.Out',
-      onComplete: () => {
-        this.tweens.add({
-          targets: reaction,
-          y: reaction.y + 4,
-          duration: 620,
-          ease: 'Sine.InOut',
-          yoyo: true,
-          repeat: -1,
-        });
-      },
-    });
   }
 
   private drawGameOver(state: GameSnapshot): void {
