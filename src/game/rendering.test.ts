@@ -4,6 +4,7 @@ import {
   GAME_TIMING,
   GAME_LAYOUT,
   getCardBorderTrailPoint,
+  getCardDealPose,
   getDeckCountsBeforeTransfer,
   getLastStatRowBottom,
   getRoundWinnerLabel,
@@ -67,5 +68,33 @@ describe('wireframe rendering metrics', () => {
   it('leaves time to compare both revealed cards before declaring the winner', () => {
     expect(GAME_TIMING.resultPauseMs).toBeGreaterThanOrEqual(800);
     expect(GAME_TIMING.resultPauseMs).toBeLessThanOrEqual(1_200);
+  });
+
+  it('deals each next card from its own deck along an inward arc', () => {
+    expect(getCardDealPose('player', 0)).toMatchObject({
+      x: GAME_LAYOUT.playerDeckX,
+      y: GAME_LAYOUT.deckY,
+    });
+    expect(getCardDealPose('ai', 0)).toMatchObject({
+      x: GAME_LAYOUT.aiDeckX,
+      y: GAME_LAYOUT.deckY,
+    });
+    expect(getCardDealPose('player', 1)).toMatchObject({
+      x: GAME_LAYOUT.playerCardX,
+      y: GAME_LAYOUT.cardY,
+      scale: 1,
+      rotation: 0,
+      alpha: 1,
+    });
+    expect(getCardDealPose('ai', 1)).toMatchObject({
+      x: GAME_LAYOUT.aiCardX,
+      y: GAME_LAYOUT.cardY,
+      scale: 1,
+      rotation: 0,
+      alpha: 1,
+    });
+    expect(getCardDealPose('player', 0.5).y).toBeLessThan(GAME_LAYOUT.cardY);
+    expect(getCardDealPose('ai', 0.5).y).toBeLessThan(GAME_LAYOUT.cardY);
+    expect(GAME_TIMING.dealMs).toBeGreaterThanOrEqual(750);
   });
 });

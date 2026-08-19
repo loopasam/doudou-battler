@@ -24,11 +24,21 @@ export const GAME_LAYOUT = {
 export const GAME_TIMING = {
   aiThinkMs: 1_550,
   resultPauseMs: 850,
+  dealSettleMs: 220,
+  dealMs: 820,
 } as const;
 
 export interface CardBorderPoint {
   x: number;
   y: number;
+}
+
+export interface CardDealPose {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  alpha: number;
 }
 
 export interface DeckCounts {
@@ -68,6 +78,26 @@ export function getCardBorderTrailPoint(progress: number): CardBorderPoint {
 
   distance -= width;
   return { x: -outerX, y: outerY - distance };
+}
+
+export function getCardDealPose(owner: 'player' | 'ai', progress: number): CardDealPose {
+  const t = Math.min(Math.max(progress, 0), 1);
+  const inverse = 1 - t;
+  const startX = owner === 'player' ? GAME_LAYOUT.playerDeckX : GAME_LAYOUT.aiDeckX;
+  const endX = owner === 'player' ? GAME_LAYOUT.playerCardX : GAME_LAYOUT.aiCardX;
+  const controlX = (startX + endX) / 2;
+  const controlY = GAME_LAYOUT.cardY - 150;
+  const startingRotation = owner === 'player' ? 0.18 : -0.18;
+
+  return {
+    x: inverse * inverse * startX + 2 * inverse * t * controlX + t * t * endX,
+    y: inverse * inverse * GAME_LAYOUT.deckY
+      + 2 * inverse * t * controlY
+      + t * t * GAME_LAYOUT.cardY,
+    scale: 0.18 + t * 0.82,
+    rotation: t === 1 ? 0 : startingRotation * inverse,
+    alpha: 0.24 + t * 0.76,
+  };
 }
 
 export function getRoundWinnerLabel(winner: 'player' | 'ai' | 'tie'): string {

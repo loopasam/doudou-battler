@@ -11,6 +11,7 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
   await page.goto('/doudou-battler/');
   await expect(page).toHaveTitle('Doudou Battler');
   const status = page.getByRole('status');
+  await expect(status).toHaveText('Round 1. Dealing cards from both decks.');
   await expect(status).toHaveText('Round 1. Your pick. You have 10 cards and AI has 10 cards.');
 
   const canvas = page.locator('canvas');
@@ -42,6 +43,7 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
     /Round 1\. Moving cards to (your deck|the AI deck|the pot)\./,
     { timeout: 10_000 },
   );
+  await expect(status).toHaveText('Round 2. Dealing cards from both decks.');
   await expect(status).toContainText('Round 2. AI pick.');
   await expect(status).toContainText('Round 2 resolved.', { timeout: 10_000 });
 

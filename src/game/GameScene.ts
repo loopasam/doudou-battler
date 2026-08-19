@@ -6,6 +6,7 @@ import {
   GAME_TIMING,
   GAME_LAYOUT,
   getCardBorderTrailPoint,
+  getCardDealPose,
   getDeckCountsBeforeTransfer,
   getRoundWinnerLabel,
   getStatRowCenter,
@@ -18,7 +19,7 @@ interface RenderOptions {
   revealAi?: boolean;
   showResult?: boolean;
   deckCounts?: DeckCounts;
-  status?: 'revealing' | 'transferring';
+  status?: 'revealing' | 'transferring' | 'dealing';
 }
 
 const COLORS = {
@@ -63,7 +64,7 @@ export class GameScene extends Phaser.Scene {
   private startGame(): void {
     this.aiTimer?.remove(false);
     this.engine = new BattleEngine(PLACEHOLDER_CARDS);
-    this.render();
+    this.playCardDeal();
   }
 
   private render(options: RenderOptions = {}): void {
@@ -80,6 +81,7 @@ export class GameScene extends Phaser.Scene {
     const revealAi = options.revealAi ?? isResolved;
     const showResult = options.showResult ?? isResolved;
     const deckCounts = options.deckCounts ?? { player: state.playerCount, ai: state.aiCount };
+    const allowInteraction = options.status !== 'dealing';
     this.drawHeader(state, deckCounts);
     this.drawDeckStacks(state, deckCounts);
     this.updateAccessibleStatus(state, options.status);
@@ -97,6 +99,7 @@ export class GameScene extends Phaser.Scene {
         'player',
         true,
         state,
+        allowInteraction,
       );
     }
     if (state.aiCard) {
@@ -107,6 +110,7 @@ export class GameScene extends Phaser.Scene {
         'ai',
         revealAi,
         state,
+        allowInteraction,
       );
     }
 
@@ -118,6 +122,8 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.drawRevealStatus();
       }
+    } else if (options.status === 'dealing') {
+      this.drawDealStatus();
     } else if (state.chooser === 'ai') {
       this.drawAiThinking();
       this.aiTimer = this.time.delayedCall(GAME_TIMING.aiThinkMs, () => {
@@ -161,6 +167,11 @@ export class GameScene extends Phaser.Scene {
           ? 'the AI deck'
           : 'the pot';
       status.textContent = `Round ${state.round}. Moving cards to ${destination}.`;
+      return;
+    }
+
+    if (transition === 'dealing') {
+      status.textContent = `Round ${state.round}. Dealing cards from both decks.`;
       return;
     }
 
@@ -295,11 +306,12 @@ export class GameScene extends Phaser.Scene {
     owner: Side,
     revealed: boolean,
     state: GameSnapshot,
+    allowInteraction = true,
   ): Phaser.GameObjects.Container {
     const group = this.add.container(x, y);
     this.ui.add(group);
     const accent = owner === 'player' ? COLORS.player : COLORS.ai;
-    const active = state.phase === 'awaiting-choice' && state.chooser === owner;
+    const active = allowInteraction && state.phase === 'awaiting-choice' && state.chooser === owner;
 
     if (active) {
       this.drawActiveCardTrail(group, owner, accent);
@@ -333,7 +345,10 @@ export class GameScene extends Phaser.Scene {
 
     STAT_KEYS.forEach((stat, index) => {
       const rowY = getStatRowCenter(index);
-      const canChoose = owner === 'player' && state.phase === 'awaiting-choice' && state.chooser === 'player';
+      const canChoose = allowInteraction
+        && owner === 'player'
+        && state.phase === 'awaiting-choice'
+        && state.chooser === 'player';
       const selected = state.lastResult?.stat === stat;
       const rowColor = selected ? accent : 0xebe5d9;
       const row = this.add.rectangle(0, rowY, 268, CARD_LAYOUT.statRowHeight, rowColor)
@@ -537,11 +552,23 @@ export class GameScene extends Phaser.Scene {
 
   private finishCardTransfer(state: GameSnapshot): void {
     const result = state.lastResult;
-    this.engine.advanceRound();
-    this.render();
-    const receivingDeck = result?.winner === 'player'
+    const nextState = this.engine.advanceRound();
+    if (nextState.phase === 'game-over') {
+      this.render();
+      return;
+    }
+
+    const receivingSide = result?.winner === 'player' || result?.winner === 'ai'
+      ? result.winner
+      : undefined;
+    this.playCardDeal(receivingSide, result?.winner === 'tie');
+  }
+
+  private playCardDeal(receivingSide?: Side, tied = false): void {
+    this.render({ status: 'dealing' });
+    const receivingDeck = receivingSide === 'player'
       ? this.playerDeckView
-      : result?.winner === 'ai'
+      : receivingSide === 'ai'
         ? this.aiDeckView
         : undefined;
 
@@ -554,9 +581,49 @@ export class GameScene extends Phaser.Scene {
         ease: 'Back.Out',
         yoyo: true,
       });
-    } else {
+    } else if (tied) {
       this.cameras.main.flash(120, 98, 217, 200, false);
     }
+
+    const cards: Array<{ view: Phaser.GameObjects.Container; owner: Side }> = [];
+    if (this.playerCardView) cards.push({ view: this.playerCardView, owner: 'player' });
+    if (this.aiCardView) cards.push({ view: this.aiCardView, owner: 'ai' });
+    if (cards.length === 0) {
+      this.render();
+      return;
+    }
+
+    cards.forEach(({ view, owner }) => {
+      const pose = getCardDealPose(owner, 0);
+      view.setPosition(pose.x, pose.y);
+      view.setScale(pose.scale);
+      view.setRotation(pose.rotation);
+      view.setAlpha(pose.alpha);
+    });
+
+    this.time.delayedCall(GAME_TIMING.dealSettleMs, () => {
+      let completedCards = 0;
+      cards.forEach(({ view, owner }, index) => {
+        this.tweens.addCounter({
+          from: 0,
+          to: 1,
+          delay: index * 90,
+          duration: GAME_TIMING.dealMs,
+          ease: 'Cubic.Out',
+          onUpdate: (tween) => {
+            const pose = getCardDealPose(owner, Number(tween.getValue()));
+            view.setPosition(pose.x, pose.y);
+            view.setScale(pose.scale);
+            view.setRotation(pose.rotation);
+            view.setAlpha(pose.alpha);
+          },
+          onComplete: () => {
+            completedCards += 1;
+            if (completedCards === cards.length) this.render();
+          },
+        });
+      });
+    });
   }
 
   private drawRevealStatus(): void {
@@ -582,6 +649,13 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, color);
     this.ui.add(panel);
     this.addUiText(640, 630, `CARDS  →  ${destination}`, 16, color).setOrigin(0.5);
+  }
+
+  private drawDealStatus(): void {
+    const panel = this.add.rectangle(640, 630, 330, 54, COLORS.panel, 0.96)
+      .setStrokeStyle(2, COLORS.accent);
+    this.ui.add(panel);
+    this.addUiText(640, 630, 'DEALING NEXT CARDS...', 16, COLORS.accent).setOrigin(0.5);
   }
 
   private drawRoundResult(state: GameSnapshot, deckCounts: DeckCounts): void {
