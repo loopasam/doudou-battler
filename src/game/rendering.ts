@@ -21,6 +21,15 @@ export const GAME_LAYOUT = {
   nextButtonRadius: 66,
 } as const;
 
+export const GAME_TIMING = {
+  aiThinkMs: 1_550,
+} as const;
+
+export interface CardBorderLightPosition {
+  x: number;
+  y: number;
+}
+
 export interface DeckCounts {
   player: number;
   ai: number;
@@ -32,6 +41,31 @@ export function getStatRowCenter(index: number): number {
 
 export function getLastStatRowBottom(): number {
   return getStatRowCenter(CARD_LAYOUT.statRowCount - 1) + CARD_LAYOUT.statRowHeight / 2;
+}
+
+export function getCardBorderLightPositions(): CardBorderLightPosition[] {
+  const outerX = CARD_LAYOUT.width / 2 + 10;
+  const outerY = CARD_LAYOUT.height / 2 + 10;
+  const segments = 9;
+  const positions: CardBorderLightPosition[] = [];
+
+  for (let index = 0; index <= segments; index += 1) {
+    const x = -outerX + (outerX * 2 * index) / segments;
+    positions.push({ x, y: -outerY }, { x, y: outerY });
+  }
+
+  for (let index = 1; index < segments; index += 1) {
+    const y = -outerY + (outerY * 2 * index) / segments;
+    positions.push({ x: -outerX, y }, { x: outerX, y });
+  }
+
+  return positions;
+}
+
+export function getRoundWinnerLabel(winner: 'player' | 'ai' | 'tie'): string {
+  if (winner === 'player') return 'YOU WON THIS ROUND';
+  if (winner === 'ai') return 'AI WON THIS ROUND';
+  return 'ROUND TIED';
 }
 
 export function getTextResolution(

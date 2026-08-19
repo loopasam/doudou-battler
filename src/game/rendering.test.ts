@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CARD_LAYOUT,
+  GAME_TIMING,
   GAME_LAYOUT,
+  getCardBorderLightPositions,
   getDeckCountsBeforeTransfer,
   getLastStatRowBottom,
+  getRoundWinnerLabel,
   getStatRowCenter,
   getTextResolution,
 } from './rendering';
@@ -37,5 +40,27 @@ describe('wireframe rendering metrics', () => {
     expect(GAME_LAYOUT.nextButtonX + GAME_LAYOUT.nextButtonRadius).toBeLessThan(
       GAME_LAYOUT.aiCardX - CARD_LAYOUT.width / 2,
     );
+  });
+
+  it('places a continuous light trail just outside the active card', () => {
+    const lights = getCardBorderLightPositions();
+    const outerX = CARD_LAYOUT.width / 2 + 10;
+    const outerY = CARD_LAYOUT.height / 2 + 10;
+
+    expect(lights.length).toBeGreaterThanOrEqual(32);
+    for (const light of lights) {
+      expect(Math.abs(light.x) === outerX || Math.abs(light.y) === outerY).toBe(true);
+    }
+  });
+
+  it('gives every result an unmistakable round-winner label', () => {
+    expect(getRoundWinnerLabel('player')).toBe('YOU WON THIS ROUND');
+    expect(getRoundWinnerLabel('ai')).toBe('AI WON THIS ROUND');
+    expect(getRoundWinnerLabel('tie')).toBe('ROUND TIED');
+  });
+
+  it('holds the AI thinking state long enough to be perceived', () => {
+    expect(GAME_TIMING.aiThinkMs).toBeGreaterThanOrEqual(1_400);
+    expect(GAME_TIMING.aiThinkMs).toBeLessThanOrEqual(2_000);
   });
 });

@@ -3,8 +3,11 @@ import { PLACEHOLDER_CARDS } from './cards';
 import { BattleEngine } from './engine';
 import {
   CARD_LAYOUT,
+  GAME_TIMING,
   GAME_LAYOUT,
+  getCardBorderLightPositions,
   getDeckCountsBeforeTransfer,
+  getRoundWinnerLabel,
   getStatRowCenter,
   getTextResolution,
   type DeckCounts,
@@ -64,6 +67,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private render(options: RenderOptions = {}): void {
+    this.tweens.killAll();
     this.ui?.destroy(true);
     this.ui = this.add.container(0, 0);
     this.playerCardView = undefined;
@@ -116,7 +120,7 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (state.chooser === 'ai') {
       this.drawAiThinking();
-      this.aiTimer = this.time.delayedCall(850, () => {
+      this.aiTimer = this.time.delayedCall(GAME_TIMING.aiThinkMs, () => {
         const stat = this.engine.chooseAiStat();
         this.resolveRound(stat);
       });
@@ -295,6 +299,11 @@ export class GameScene extends Phaser.Scene {
     const group = this.add.container(x, y);
     this.ui.add(group);
     const accent = owner === 'player' ? COLORS.player : COLORS.ai;
+    const active = state.phase === 'awaiting-choice' && state.chooser === owner;
+
+    if (active) {
+      this.drawActiveCardLights(group, owner, accent);
+    }
 
     const shadow = this.add.rectangle(10, 12, CARD_LAYOUT.width, CARD_LAYOUT.height, 0x000000, 0.3);
     const body = this.add.rectangle(0, 0, CARD_LAYOUT.width, CARD_LAYOUT.height, COLORS.paper)
@@ -418,21 +427,45 @@ export class GameScene extends Phaser.Scene {
     this.render({ revealAi: true, showResult: true, deckCounts });
     this.cameras.main.shake(150, 0.007);
 
-    const winnerView = state.lastResult?.winner === 'player'
+    const winner = state.lastResult?.winner;
+    const winnerView = winner === 'player'
       ? this.playerCardView
-      : state.lastResult?.winner === 'ai'
+      : winner === 'ai'
         ? this.aiCardView
         : undefined;
+    const loserView = winner === 'player'
+      ? this.aiCardView
+      : winner === 'ai'
+        ? this.playerCardView
+        : undefined;
+
     if (winnerView) {
+      const winnerColor = winner === 'player' ? COLORS.player : COLORS.ai;
+      this.drawWinnerCardGlow(winnerView, winnerColor);
+
+      if (loserView) {
+        this.tweens.add({
+          targets: loserView,
+          alpha: 0.46,
+          scaleX: 0.975,
+          scaleY: 0.975,
+          y: loserView.y + 8,
+          duration: 300,
+          ease: 'Sine.Out',
+        });
+      }
+
       this.tweens.add({
         targets: winnerView,
-        scaleX: 1.045,
-        scaleY: 1.045,
-        y: winnerView.y - 8,
-        duration: 160,
+        scaleX: 1.055,
+        scaleY: 1.055,
+        y: winnerView.y - 12,
+        duration: 240,
         ease: 'Back.Out',
-        yoyo: true,
       });
+    } else if (winner === 'tie') {
+      if (this.playerCardView) this.drawWinnerCardGlow(this.playerCardView, COLORS.accent);
+      if (this.aiCardView) this.drawWinnerCardGlow(this.aiCardView, COLORS.accent);
     }
   }
 
@@ -566,6 +599,22 @@ export class GameScene extends Phaser.Scene {
         ? COLORS.ai
         : COLORS.accent;
 
+    const winnerBanner = this.add.rectangle(640, 110, 374, 58, COLORS.panel, 0.98)
+      .setStrokeStyle(4, resultColor);
+    const winnerBannerInner = this.add.rectangle(640, 110, 354, 40, resultColor, 0.12)
+      .setStrokeStyle(1, resultColor, 0.55);
+    this.ui.add([winnerBanner, winnerBannerInner]);
+    this.addUiText(640, 110, getRoundWinnerLabel(result.winner), 23, resultColor).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: winnerBanner,
+      alpha: 0.62,
+      duration: 430,
+      ease: 'Sine.InOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
     const panel = this.add.rectangle(640, 630, 330, 62, COLORS.panel, 0.97)
       .setStrokeStyle(3, resultColor);
     this.ui.add(panel);
@@ -589,6 +638,93 @@ export class GameScene extends Phaser.Scene {
     this.ui.add(panel);
     this.addUiText(640, 630, 'AI IS SCANNING...', 17, COLORS.ai).setOrigin(0.5);
     this.tweens.add({ targets: panel, alpha: 0.55, duration: 260, yoyo: true, repeat: -1 });
+  }
+
+  private drawActiveCardLights(
+    group: Phaser.GameObjects.Container,
+    owner: Side,
+    accent: number,
+  ): void {
+    const halo = this.add.rectangle(
+      0,
+      0,
+      CARD_LAYOUT.width + 20,
+      CARD_LAYOUT.height + 20,
+      accent,
+      0.035,
+    ).setStrokeStyle(3, accent, 0.5);
+    group.add(halo);
+
+    this.tweens.add({
+      targets: halo,
+      alpha: 0.28,
+      scaleX: 1.025,
+      scaleY: 1.018,
+      duration: 720,
+      ease: 'Sine.InOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    getCardBorderLightPositions().forEach((position, index) => {
+      const bulbColor = index % 3 === 0
+        ? COLORS.paper
+        : index % 3 === 1
+          ? accent
+          : COLORS.accent;
+      const bulb = this.add.circle(position.x, position.y, index % 3 === 0 ? 4.5 : 3.5, bulbColor, 0.28)
+        .setStrokeStyle(1, COLORS.ink, 0.7)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      group.add(bulb);
+      this.tweens.add({
+        targets: bulb,
+        alpha: 1,
+        scaleX: 1.55,
+        scaleY: 1.55,
+        delay: index * 42,
+        duration: 460,
+        ease: 'Sine.InOut',
+        yoyo: true,
+        repeat: -1,
+      });
+    });
+
+    const turnTag = this.add.rectangle(0, -260, 226, 34, COLORS.panel, 0.98)
+      .setStrokeStyle(2, accent);
+    const turnText = this.makeText(
+      0,
+      -260,
+      owner === 'player' ? 'YOUR TURN  //  CHOOSE' : 'AI TURN  //  THINKING',
+      14,
+      accent,
+    ).setOrigin(0.5);
+    group.add([turnTag, turnText]);
+  }
+
+  private drawWinnerCardGlow(
+    group: Phaser.GameObjects.Container,
+    color: number,
+  ): void {
+    const outerGlow = this.add.rectangle(
+      0,
+      0,
+      CARD_LAYOUT.width + 18,
+      CARD_LAYOUT.height + 18,
+      color,
+      0.025,
+    ).setStrokeStyle(7, color, 0.92).setBlendMode(Phaser.BlendModes.ADD);
+    group.add(outerGlow);
+
+    this.tweens.add({
+      targets: outerGlow,
+      alpha: 0.32,
+      scaleX: 1.035,
+      scaleY: 1.025,
+      duration: 520,
+      ease: 'Sine.InOut',
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   private drawGameOver(state: GameSnapshot): void {
