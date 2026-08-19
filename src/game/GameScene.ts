@@ -108,7 +108,7 @@ export class GameScene extends Phaser.Scene {
 
     if (state.phase === 'resolved') {
       if (showResult) {
-        this.drawRoundResult(state);
+        this.drawRoundResult(state, deckCounts);
       } else if (options.status === 'transferring') {
         this.drawTransferStatus(state);
       } else {
@@ -376,7 +376,7 @@ export class GameScene extends Phaser.Scene {
     });
     const hiddenCard = this.aiCardView;
     if (!hiddenCard) {
-      this.playCardTransfer(state, deckCounts);
+      this.finishRoundReveal(state, deckCounts);
       return;
     }
 
@@ -395,7 +395,7 @@ export class GameScene extends Phaser.Scene {
         });
         const revealedCard = this.aiCardView;
         if (!revealedCard) {
-          this.playCardTransfer(state, deckCounts);
+          this.finishRoundReveal(state, deckCounts);
           return;
         }
 
@@ -407,11 +407,33 @@ export class GameScene extends Phaser.Scene {
           ease: 'Back.Out',
           onComplete: () => this.time.delayedCall(
             180,
-            () => this.playCardTransfer(state, deckCounts),
+            () => this.finishRoundReveal(state, deckCounts),
           ),
         });
       },
     });
+  }
+
+  private finishRoundReveal(state: GameSnapshot, deckCounts: DeckCounts): void {
+    this.render({ revealAi: true, showResult: true, deckCounts });
+    this.cameras.main.shake(150, 0.007);
+
+    const winnerView = state.lastResult?.winner === 'player'
+      ? this.playerCardView
+      : state.lastResult?.winner === 'ai'
+        ? this.aiCardView
+        : undefined;
+    if (winnerView) {
+      this.tweens.add({
+        targets: winnerView,
+        scaleX: 1.045,
+        scaleY: 1.045,
+        y: winnerView.y - 8,
+        duration: 160,
+        ease: 'Back.Out',
+        yoyo: true,
+      });
+    }
   }
 
   private playCardTransfer(state: GameSnapshot, deckCounts: DeckCounts): void {
@@ -481,8 +503,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private finishCardTransfer(state: GameSnapshot): void {
-    this.render();
     const result = state.lastResult;
+    this.engine.advanceRound();
+    this.render();
     const receivingDeck = result?.winner === 'player'
       ? this.playerDeckView
       : result?.winner === 'ai'
@@ -528,7 +551,7 @@ export class GameScene extends Phaser.Scene {
     this.addUiText(640, 630, `CARDS  →  ${destination}`, 16, color).setOrigin(0.5);
   }
 
-  private drawRoundResult(state: GameSnapshot): void {
+  private drawRoundResult(state: GameSnapshot, deckCounts: DeckCounts): void {
     const result = state.lastResult;
     if (!result) return;
 
@@ -556,8 +579,7 @@ export class GameScene extends Phaser.Scene {
       actionLabel,
       resultColor,
       () => {
-      this.engine.advanceRound();
-      this.render();
+        this.playCardTransfer(state, deckCounts);
       },
     );
   }
