@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import { PLACEHOLDER_CARDS } from './cards';
 import { BattleEngine } from './engine';
 import {
+  ACTIVE_SNAKE_OFFSETS,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  WINNER_CELEBRATION_POSES,
   WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -481,7 +483,6 @@ export class GameScene extends Phaser.Scene {
 
   private finishRoundReveal(state: GameSnapshot, deckCounts: DeckCounts): void {
     this.render({ revealAi: true, showResult: true, deckCounts });
-    this.cameras.main.shake(150, 0.007);
 
     const winner = state.lastResult?.winner;
     const winnerView = winner === 'player'
@@ -496,6 +497,7 @@ export class GameScene extends Phaser.Scene {
         : undefined;
 
     if (winnerView) {
+      this.cameras.main.shake(300, 0.012);
       const winnerColor = winner === 'player' ? COLORS.player : COLORS.ai;
       this.drawWinnerCardGlow(winnerView, winnerColor);
 
@@ -511,18 +513,36 @@ export class GameScene extends Phaser.Scene {
         });
       }
 
-      this.tweens.add({
-        targets: winnerView,
-        scaleX: 1.055,
-        scaleY: 1.055,
-        y: winnerView.y - 12,
-        duration: 240,
-        ease: 'Back.Out',
-      });
+      this.playWinnerCelebration(winnerView);
     } else if (winner === 'tie') {
+      this.cameras.main.shake(150, 0.007);
       if (this.playerCardView) this.drawWinnerCardGlow(this.playerCardView, COLORS.accent);
       if (this.aiCardView) this.drawWinnerCardGlow(this.aiCardView, COLORS.accent);
     }
+  }
+
+  private playWinnerCelebration(group: Phaser.GameObjects.Container): void {
+    const originX = group.x;
+    const originY = group.y;
+
+    const playPose = (index: number): void => {
+      const pose = WINNER_CELEBRATION_POSES[index];
+      if (!pose) return;
+
+      this.tweens.add({
+        targets: group,
+        x: originX + pose.offsetX,
+        y: originY + pose.offsetY,
+        angle: pose.angle,
+        scaleX: pose.scale,
+        scaleY: pose.scale,
+        duration: pose.durationMs,
+        ease: index === WINNER_CELEBRATION_POSES.length - 1 ? 'Back.Out' : 'Quad.InOut',
+        onComplete: () => playPose(index + 1),
+      });
+    };
+
+    playPose(0);
   }
 
   private playCardTransfer(state: GameSnapshot, deckCounts: DeckCounts): void {
@@ -781,40 +801,46 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    const segmentCount = 16;
-    const trail = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    const head = this.add.circle(0, 0, 6.5, accent)
-      .setStrokeStyle(2, COLORS.paper, 0.88)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    group.add([trail, head]);
+    const segmentCount = 13;
+    const snakes = ACTIVE_SNAKE_OFFSETS.map(() => {
+      const trail = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+      const head = this.add.circle(0, 0, 5.5, accent)
+        .setStrokeStyle(1.5, COLORS.paper, 0.88)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      group.add([trail, head]);
+      return { trail, head };
+    });
 
-    const drawTrail = (progress: number): void => {
-      const points = Array.from(
-        { length: segmentCount },
-        (_, index) => getCardBorderTrailPoint(progress - index * 0.0055),
-      );
-      trail.clear();
-      for (let index = segmentCount - 2; index >= 0; index -= 1) {
-        const strength = 1 - index / (segmentCount - 1);
-        trail.lineStyle(2.5 + strength * 5.5, accent, 0.12 + strength * 0.82);
-        trail.lineBetween(
-          points[index].x,
-          points[index].y,
-          points[index + 1].x,
-          points[index + 1].y,
+    const drawTrails = (progress: number): void => {
+      snakes.forEach(({ trail, head }, snakeIndex) => {
+        const snakeProgress = progress + ACTIVE_SNAKE_OFFSETS[snakeIndex];
+        const points = Array.from(
+          { length: segmentCount },
+          (_, index) => getCardBorderTrailPoint(snakeProgress - index * 0.0048),
         );
-      }
-      head.setPosition(points[0].x, points[0].y);
+        trail.clear();
+        for (let index = segmentCount - 2; index >= 0; index -= 1) {
+          const strength = 1 - index / (segmentCount - 1);
+          trail.lineStyle(2 + strength * 4.5, accent, 0.1 + strength * 0.78);
+          trail.lineBetween(
+            points[index].x,
+            points[index].y,
+            points[index + 1].x,
+            points[index + 1].y,
+          );
+        }
+        head.setPosition(points[0].x, points[0].y);
+      });
     };
 
-    drawTrail(0);
+    drawTrails(0);
     this.tweens.addCounter({
       from: 0,
       to: 1,
       duration: 2_250,
       repeat: -1,
       onUpdate: (tween) => {
-        drawTrail(Number(tween.getValue()));
+        drawTrails(Number(tween.getValue()));
       },
     });
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACTIVE_SNAKE_OFFSETS,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  WINNER_CELEBRATION_POSES,
   WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -44,11 +46,13 @@ describe('wireframe rendering metrics', () => {
     );
   });
 
-  it('loops a snake trail continuously around the active card border', () => {
+  it('loops four evenly spaced snake trails around the active card border', () => {
     const outerX = CARD_LAYOUT.width / 2 + 10;
     const outerY = CARD_LAYOUT.height / 2 + 10;
     const samples = Array.from({ length: 101 }, (_, index) => getCardBorderTrailPoint(index / 100));
 
+    expect(ACTIVE_SNAKE_OFFSETS).toEqual([0, 0.25, 0.5, 0.75]);
+    expect(ACTIVE_SNAKE_OFFSETS).toHaveLength(4);
     expect(samples[0]).toEqual(samples.at(-1));
     for (const point of samples) {
       expect(Math.abs(point.x) === outerX || Math.abs(point.y) === outerY).toBe(true);
@@ -81,6 +85,21 @@ describe('wireframe rendering metrics', () => {
       + GAME_TIMING.winnerTiltRecoverMs;
     expect(duration).toBeGreaterThanOrEqual(800);
     expect(duration).toBeLessThanOrEqual(1_200);
+  });
+
+  it('celebrates the winner with a short irregular impact shake', () => {
+    const angles = WINNER_CELEBRATION_POSES.map(({ angle }) => angle);
+    const durations = WINNER_CELEBRATION_POSES.map(({ durationMs }) => durationMs);
+
+    expect(angles.slice(0, -1).some((angle) => angle < 0)).toBe(true);
+    expect(angles.slice(0, -1).some((angle) => angle > 0)).toBe(true);
+    expect(new Set(angles.map(Math.abs)).size).toBeGreaterThan(3);
+    expect(new Set(durations).size).toBeGreaterThan(3);
+    expect(WINNER_CELEBRATION_POSES.at(-1)).toMatchObject({
+      offsetX: 0,
+      angle: 0,
+    });
+    expect(durations.reduce((total, duration) => total + duration, 0)).toBeLessThanOrEqual(600);
   });
 
   it('deals each next card from its own deck along an inward arc', () => {

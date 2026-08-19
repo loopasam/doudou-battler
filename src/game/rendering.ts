@@ -33,6 +33,15 @@ export const GAME_TIMING = {
 } as const;
 
 export const WINNER_TILT_ANGLES = [-2.4, 2.4, 0] as const;
+export const ACTIVE_SNAKE_OFFSETS = [0, 0.25, 0.5, 0.75] as const;
+
+export const WINNER_CELEBRATION_POSES = [
+  { offsetX: -10, offsetY: -16, angle: -4.4, scale: 1.07, durationMs: 65 },
+  { offsetX: 12, offsetY: -8, angle: 3.2, scale: 1.04, durationMs: 85 },
+  { offsetX: -7, offsetY: -19, angle: -2.6, scale: 1.085, durationMs: 70 },
+  { offsetX: 5, offsetY: -10, angle: 1.5, scale: 1.055, durationMs: 95 },
+  { offsetX: 0, offsetY: -12, angle: 0, scale: 1.055, durationMs: 170 },
+] as const;
 
 export interface CardBorderPoint {
   x: number;
