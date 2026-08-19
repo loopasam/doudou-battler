@@ -1,12 +1,21 @@
 import Phaser from 'phaser';
 import { PLACEHOLDER_CARDS } from './cards';
 import { BattleEngine } from './engine';
-import { CARD_LAYOUT, GAME_LAYOUT, getStatRowCenter, getTextResolution } from './rendering';
+import {
+  CARD_LAYOUT,
+  GAME_LAYOUT,
+  getDeckCountsBeforeTransfer,
+  getStatRowCenter,
+  getTextResolution,
+  type DeckCounts,
+} from './rendering';
 import { STAT_KEYS, type BattleCard, type GameSnapshot, type Side, type StatKey } from './types';
 
 interface RenderOptions {
   revealAi?: boolean;
   showResult?: boolean;
+  deckCounts?: DeckCounts;
+  status?: 'revealing' | 'transferring';
 }
 
 const COLORS = {
@@ -34,6 +43,8 @@ export class GameScene extends Phaser.Scene {
   private ui!: Phaser.GameObjects.Container;
   private playerCardView?: Phaser.GameObjects.Container;
   private aiCardView?: Phaser.GameObjects.Container;
+  private playerDeckView?: Phaser.GameObjects.Container;
+  private aiDeckView?: Phaser.GameObjects.Container;
   private aiTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
@@ -57,13 +68,17 @@ export class GameScene extends Phaser.Scene {
     this.ui = this.add.container(0, 0);
     this.playerCardView = undefined;
     this.aiCardView = undefined;
+    this.playerDeckView = undefined;
+    this.aiDeckView = undefined;
 
     const state = this.engine.getSnapshot();
     const isResolved = state.phase === 'resolved';
     const revealAi = options.revealAi ?? isResolved;
     const showResult = options.showResult ?? isResolved;
-    this.drawHeader(state);
-    this.updateAccessibleStatus(state, isResolved && !showResult);
+    const deckCounts = options.deckCounts ?? { player: state.playerCount, ai: state.aiCount };
+    this.drawHeader(state, deckCounts);
+    this.drawDeckStacks(state, deckCounts);
+    this.updateAccessibleStatus(state, options.status);
 
     if (state.phase === 'game-over') {
       this.drawGameOver(state);
@@ -94,6 +109,8 @@ export class GameScene extends Phaser.Scene {
     if (state.phase === 'resolved') {
       if (showResult) {
         this.drawRoundResult(state);
+      } else if (options.status === 'transferring') {
+        this.drawTransferStatus(state);
       } else {
         this.drawRevealStatus();
       }
@@ -121,12 +138,25 @@ export class GameScene extends Phaser.Scene {
     graphics.strokeRect(24, 24, 1232, 672);
   }
 
-  private updateAccessibleStatus(state: GameSnapshot, revealing = false): void {
+  private updateAccessibleStatus(
+    state: GameSnapshot,
+    transition?: RenderOptions['status'],
+  ): void {
     const status = document.querySelector<HTMLElement>('#game-status');
     if (!status) return;
 
-    if (revealing) {
+    if (transition === 'revealing') {
       status.textContent = `Round ${state.round}. Revealing AI card.`;
+      return;
+    }
+
+    if (transition === 'transferring' && state.lastResult) {
+      const destination = state.lastResult.winner === 'player'
+        ? 'your deck'
+        : state.lastResult.winner === 'ai'
+          ? 'the AI deck'
+          : 'the pot';
+      status.textContent = `Round ${state.round}. Moving cards to ${destination}.`;
       return;
     }
 
@@ -155,7 +185,7 @@ export class GameScene extends Phaser.Scene {
     status.textContent = `Round ${state.round}. ${picker}. You have ${state.playerCount} cards and AI has ${state.aiCount} cards.`;
   }
 
-  private drawHeader(state: GameSnapshot): void {
+  private drawHeader(state: GameSnapshot, deckCounts: DeckCounts): void {
     this.addUiText(48, 42, 'DOUDOU // BATTLER', 28, COLORS.paper);
     this.addUiText(48, 80, `ROUND ${String(state.round).padStart(2, '0')}`, 16, COLORS.muted);
 
@@ -165,9 +195,93 @@ export class GameScene extends Phaser.Scene {
     this.ui.add(badge);
     this.addUiText(640, 58, chooserText, 17, COLORS.ink).setOrigin(0.5);
 
-    this.addUiText(1230, 44, `YOU  ${state.playerCount}`, 18, COLORS.player).setOrigin(1, 0);
-    this.addUiText(1230, 72, `AI   ${state.aiCount}`, 18, COLORS.ai).setOrigin(1, 0);
+    this.addUiText(1230, 44, `YOU  ${deckCounts.player}`, 18, COLORS.player).setOrigin(1, 0);
+    this.addUiText(1230, 72, `AI   ${deckCounts.ai}`, 18, COLORS.ai).setOrigin(1, 0);
     this.addUiText(1230, 100, `POT  ${state.potCount}`, 14, COLORS.muted).setOrigin(1, 0);
+  }
+
+  private drawDeckStacks(state: GameSnapshot, counts: DeckCounts): void {
+    this.playerDeckView = this.drawDeckStack(
+      GAME_LAYOUT.playerDeckX,
+      GAME_LAYOUT.deckY,
+      'player',
+      counts.player,
+      state.chooser === 'player' && state.phase === 'awaiting-choice',
+    );
+    this.aiDeckView = this.drawDeckStack(
+      GAME_LAYOUT.aiDeckX,
+      GAME_LAYOUT.deckY,
+      'ai',
+      counts.ai,
+      state.chooser === 'ai' && state.phase === 'awaiting-choice',
+    );
+  }
+
+  private drawDeckStack(
+    x: number,
+    y: number,
+    owner: Side,
+    count: number,
+    active: boolean,
+  ): Phaser.GameObjects.Container {
+    const group = this.add.container(x, y);
+    this.ui.add(group);
+    const accent = owner === 'player' ? COLORS.player : COLORS.ai;
+    const direction = owner === 'player' ? 1 : -1;
+    const visibleLayers = Math.min(count, 18);
+    const totalOffset = Math.max(visibleLayers - 1, 0);
+
+    this.addDeckText(
+      group,
+      0,
+      -130,
+      owner === 'player' ? 'YOUR DECK' : 'AI DECK',
+      12,
+      active ? accent : COLORS.muted,
+    ).setOrigin(0.5);
+
+    if (visibleLayers === 0) {
+      const empty = this.add.rectangle(0, -4, 100, 146, COLORS.panel, 0.18)
+        .setStrokeStyle(2, accent, 0.35);
+      group.add(empty);
+    }
+
+    for (let index = 0; index < visibleLayers; index += 1) {
+      const offsetX = direction * (index - totalOffset / 2) * 1.25;
+      const offsetY = (index - totalOffset / 2) * 2.8;
+      const layer = this.add.rectangle(offsetX, offsetY, 100, 146, COLORS.panel)
+        .setStrokeStyle(2, accent, index === visibleLayers - 1 ? 1 : 0.68);
+      group.add(layer);
+
+      if (index === visibleLayers - 1) {
+        const inset = this.add.rectangle(offsetX, offsetY, 78, 120, COLORS.ink)
+          .setStrokeStyle(1, accent, 0.72);
+        const stripeOne = this.add.rectangle(offsetX, offsetY - 24, 54, 3, accent, 0.72);
+        const stripeTwo = this.add.rectangle(offsetX, offsetY + 24, 54, 3, accent, 0.72);
+        const mark = this.makeText(offsetX, offsetY, owner === 'player' ? 'P' : 'AI', 25, accent)
+          .setOrigin(0.5);
+        group.add([inset, stripeOne, stripeTwo, mark]);
+      }
+    }
+
+    const countBadge = this.add.circle(0, 118, 26, active ? accent : COLORS.paper)
+      .setStrokeStyle(3, COLORS.ink);
+    const countLabel = this.makeText(0, 118, String(count), 20, COLORS.ink).setOrigin(0.5);
+    group.add([countBadge, countLabel]);
+    return group;
+  }
+
+  private addDeckText(
+    group: Phaser.GameObjects.Container,
+    x: number,
+    y: number,
+    content: string,
+    size: number,
+    color: number,
+  ): Phaser.GameObjects.Text {
+    const text = this.makeText(x, y, content, size, color);
+    group.add(text);
+    return text;
   }
 
   private drawCard(
@@ -241,10 +355,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playAiReveal(state: GameSnapshot): void {
-    this.render({ revealAi: false, showResult: false });
+    const result = state.lastResult;
+    if (!result) {
+      this.render();
+      return;
+    }
+
+    const deckCounts = getDeckCountsBeforeTransfer(
+      state.playerCount,
+      state.aiCount,
+      result.winner,
+      result.capturedCount,
+    );
+    this.render({
+      revealAi: false,
+      showResult: false,
+      deckCounts,
+      status: 'revealing',
+    });
     const hiddenCard = this.aiCardView;
     if (!hiddenCard) {
-      this.finishReveal(state);
+      this.playCardTransfer(state, deckCounts);
       return;
     }
 
@@ -255,10 +386,15 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.In',
       onComplete: () => {
         this.cameras.main.flash(90, 255, 245, 220, false);
-        this.render({ revealAi: true, showResult: false });
+        this.render({
+          revealAi: true,
+          showResult: false,
+          deckCounts,
+          status: 'revealing',
+        });
         const revealedCard = this.aiCardView;
         if (!revealedCard) {
-          this.finishReveal(state);
+          this.playCardTransfer(state, deckCounts);
           return;
         }
 
@@ -268,31 +404,101 @@ export class GameScene extends Phaser.Scene {
           scaleX: 1,
           duration: 460,
           ease: 'Back.Out',
-          onComplete: () => this.time.delayedCall(140, () => this.finishReveal(state)),
+          onComplete: () => this.time.delayedCall(
+            180,
+            () => this.playCardTransfer(state, deckCounts),
+          ),
         });
       },
     });
   }
 
-  private finishReveal(state: GameSnapshot): void {
-    this.render();
-    this.cameras.main.shake(180, 0.009);
+  private playCardTransfer(state: GameSnapshot, deckCounts: DeckCounts): void {
+    const result = state.lastResult;
+    if (!result) {
+      this.render();
+      return;
+    }
 
-    const winnerView = state.lastResult?.winner === 'player'
-      ? this.playerCardView
-      : state.lastResult?.winner === 'ai'
-        ? this.aiCardView
+    this.render({
+      revealAi: true,
+      showResult: false,
+      deckCounts,
+      status: 'transferring',
+    });
+    this.cameras.main.shake(130, 0.006);
+
+    const destination = result.winner === 'player'
+      ? { x: GAME_LAYOUT.playerDeckX, y: GAME_LAYOUT.deckY + 70 }
+      : result.winner === 'ai'
+        ? { x: GAME_LAYOUT.aiDeckX, y: GAME_LAYOUT.deckY + 70 }
+        : { x: GAME_LAYOUT.width / 2, y: 620 };
+    const cards = [this.playerCardView, this.aiCardView].filter(
+      (card): card is Phaser.GameObjects.Container => Boolean(card),
+    );
+
+    if (cards.length === 0) {
+      this.finishCardTransfer(state);
+      return;
+    }
+
+    let completedCards = 0;
+    cards.forEach((card, index) => {
+      const startX = card.x;
+      const startY = card.y;
+      const controlX = (startX + destination.x) / 2;
+      const controlY = result.winner === 'tie' ? 560 : 610;
+      const finalRotation = destination.x < startX ? -0.42 : 0.42;
+
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        delay: index * 130,
+        duration: 860,
+        ease: 'Cubic.InOut',
+        onUpdate: (tween) => {
+          const progress = Number(tween.getValue());
+          const inverse = 1 - progress;
+          card.x = inverse * inverse * startX
+            + 2 * inverse * progress * controlX
+            + progress * progress * destination.x;
+          card.y = inverse * inverse * startY
+            + 2 * inverse * progress * controlY
+            + progress * progress * destination.y;
+          card.rotation = finalRotation * progress;
+          card.setScale(1 - progress * 0.83);
+          card.alpha = 1 - Math.pow(progress, 3) * 0.94;
+        },
+        onComplete: () => {
+          completedCards += 1;
+          if (completedCards === cards.length) {
+            this.finishCardTransfer(state);
+          }
+        },
+      });
+    });
+  }
+
+  private finishCardTransfer(state: GameSnapshot): void {
+    this.render();
+    const result = state.lastResult;
+    const receivingDeck = result?.winner === 'player'
+      ? this.playerDeckView
+      : result?.winner === 'ai'
+        ? this.aiDeckView
         : undefined;
-    if (winnerView) {
+
+    if (receivingDeck) {
       this.tweens.add({
-        targets: winnerView,
-        scaleX: 1.065,
-        scaleY: 1.065,
-        y: winnerView.y - 10,
-        duration: 150,
+        targets: receivingDeck,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        duration: 170,
         ease: 'Back.Out',
         yoyo: true,
       });
+    } else {
+      this.cameras.main.flash(120, 98, 217, 200, false);
     }
   }
 
@@ -300,6 +506,25 @@ export class GameScene extends Phaser.Scene {
     const panel = this.add.rectangle(640, 630, 250, 52, COLORS.panel, 0.96).setStrokeStyle(2, COLORS.accent);
     this.ui.add(panel);
     this.addUiText(640, 630, 'REVEALING...', 16, COLORS.accent).setOrigin(0.5);
+  }
+
+  private drawTransferStatus(state: GameSnapshot): void {
+    const result = state.lastResult;
+    if (!result) return;
+    const destination = result.winner === 'player'
+      ? 'YOUR DECK'
+      : result.winner === 'ai'
+        ? 'AI DECK'
+        : 'POT';
+    const color = result.winner === 'player'
+      ? COLORS.player
+      : result.winner === 'ai'
+        ? COLORS.ai
+        : COLORS.accent;
+    const panel = this.add.rectangle(640, 630, 310, 52, COLORS.panel, 0.96)
+      .setStrokeStyle(2, color);
+    this.ui.add(panel);
+    this.addUiText(640, 630, `CARDS  →  ${destination}`, 16, color).setOrigin(0.5);
   }
 
   private drawRoundResult(state: GameSnapshot): void {

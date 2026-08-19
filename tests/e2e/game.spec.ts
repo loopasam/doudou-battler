@@ -29,6 +29,10 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
     },
   });
   await expect(status).toContainText('Revealing AI card.');
+  await expect(status).toHaveText(
+    /Round 1\. Moving cards to (your deck|the AI deck|the pot)\./,
+    { timeout: 10_000 },
+  );
   await expect(status).toContainText('Round 1 resolved.');
   await page.waitForTimeout(250);
 

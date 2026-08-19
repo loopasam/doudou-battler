@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CARD_LAYOUT,
+  getDeckCountsBeforeTransfer,
   getLastStatRowBottom,
   getStatRowCenter,
   getTextResolution,
@@ -17,5 +18,12 @@ describe('wireframe rendering metrics', () => {
     expect(getTextResolution(1)).toBe(2);
     expect(getTextResolution(2.5)).toBe(2.5);
     expect(getTextResolution(4)).toBe(3);
+  });
+
+  it('holds the old deck thickness until captured cards finish moving', () => {
+    expect(getDeckCountsBeforeTransfer(11, 9, 'player', 2)).toEqual({ player: 10, ai: 10 });
+    expect(getDeckCountsBeforeTransfer(9, 11, 'ai', 2)).toEqual({ player: 10, ai: 10 });
+    expect(getDeckCountsBeforeTransfer(9, 9, 'tie', 0)).toEqual({ player: 10, ai: 10 });
+    expect(getDeckCountsBeforeTransfer(13, 7, 'player', 4)).toEqual({ player: 10, ai: 8 });
   });
 });
