@@ -415,7 +415,7 @@ export class GameScene extends Phaser.Scene {
           duration: 460,
           ease: 'Back.Out',
           onComplete: () => this.time.delayedCall(
-            180,
+            GAME_TIMING.resultPauseMs,
             () => this.finishRoundReveal(state, deckCounts),
           ),
         });

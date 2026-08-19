@@ -23,6 +23,7 @@ export const GAME_LAYOUT = {
 
 export const GAME_TIMING = {
   aiThinkMs: 1_550,
+  resultPauseMs: 850,
 } as const;
 
 export interface CardBorderPoint {

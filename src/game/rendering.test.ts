@@ -63,4 +63,9 @@ describe('wireframe rendering metrics', () => {
     expect(GAME_TIMING.aiThinkMs).toBeGreaterThanOrEqual(1_400);
     expect(GAME_TIMING.aiThinkMs).toBeLessThanOrEqual(2_000);
   });
+
+  it('leaves time to compare both revealed cards before declaring the winner', () => {
+    expect(GAME_TIMING.resultPauseMs).toBeGreaterThanOrEqual(800);
+    expect(GAME_TIMING.resultPauseMs).toBeLessThanOrEqual(1_200);
+  });
 });
