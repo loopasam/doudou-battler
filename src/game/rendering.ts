@@ -43,6 +43,13 @@ export const WINNER_CELEBRATION_POSES = [
   { offsetX: 0, offsetY: -12, angle: 0, scale: 1.055, durationMs: 170 },
 ] as const;
 
+export const WINNER_RESULT_SWAY_POSES = [
+  { offsetX: -2, offsetY: -1, angle: -1.35, scale: 1.058, durationMs: 380 },
+  { offsetX: 2, offsetY: 1, angle: 0.85, scale: 1.052, durationMs: 520 },
+  { offsetX: -1, offsetY: -2, angle: -0.65, scale: 1.06, durationMs: 440 },
+  { offsetX: 1, offsetY: 0, angle: 1.1, scale: 1.055, durationMs: 610 },
+] as const;
+
 export interface CardBorderPoint {
   x: number;
   y: number;

@@ -5,6 +5,7 @@ import {
   GAME_TIMING,
   GAME_LAYOUT,
   WINNER_CELEBRATION_POSES,
+  WINNER_RESULT_SWAY_POSES,
   WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -100,6 +101,20 @@ describe('wireframe rendering metrics', () => {
       angle: 0,
     });
     expect(durations.reduce((total, duration) => total + duration, 0)).toBeLessThanOrEqual(600);
+  });
+
+  it('keeps the winner in a smaller uneven sway until card transfer', () => {
+    const impactAngles = WINNER_CELEBRATION_POSES.map(({ angle }) => Math.abs(angle));
+    const swayAngles = WINNER_RESULT_SWAY_POSES.map(({ angle }) => angle);
+    const swayDurations = WINNER_RESULT_SWAY_POSES.map(({ durationMs }) => durationMs);
+
+    expect(swayAngles.some((angle) => angle < 0)).toBe(true);
+    expect(swayAngles.some((angle) => angle > 0)).toBe(true);
+    expect(Math.max(...swayAngles.map(Math.abs))).toBeLessThan(Math.max(...impactAngles));
+    expect(Math.max(...swayAngles.map(Math.abs))).toBeLessThanOrEqual(1.5);
+    expect(new Set(swayAngles.map(Math.abs)).size).toBeGreaterThan(2);
+    expect(new Set(swayDurations).size).toBe(WINNER_RESULT_SWAY_POSES.length);
+    expect(swayDurations.reduce((total, duration) => total + duration, 0)).toBeGreaterThanOrEqual(1_500);
   });
 
   it('deals each next card from its own deck along an inward arc', () => {

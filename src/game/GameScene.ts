@@ -7,6 +7,7 @@ import {
   GAME_TIMING,
   GAME_LAYOUT,
   WINNER_CELEBRATION_POSES,
+  WINNER_RESULT_SWAY_POSES,
   WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
@@ -538,6 +539,39 @@ export class GameScene extends Phaser.Scene {
         scaleY: pose.scale,
         duration: pose.durationMs,
         ease: index === WINNER_CELEBRATION_POSES.length - 1 ? 'Back.Out' : 'Quad.InOut',
+        onComplete: () => {
+          if (index === WINNER_CELEBRATION_POSES.length - 1) {
+            this.playWinnerResultSway(group);
+            return;
+          }
+          playPose(index + 1);
+        },
+      });
+    };
+
+    playPose(0);
+  }
+
+  private playWinnerResultSway(group: Phaser.GameObjects.Container): void {
+    const settledX = group.x;
+    const settledY = group.y;
+
+    const playPose = (index: number): void => {
+      const pose = WINNER_RESULT_SWAY_POSES[index];
+      if (!pose) {
+        playPose(0);
+        return;
+      }
+
+      this.tweens.add({
+        targets: group,
+        x: settledX + pose.offsetX,
+        y: settledY + pose.offsetY,
+        angle: pose.angle,
+        scaleX: pose.scale,
+        scaleY: pose.scale,
+        duration: pose.durationMs,
+        ease: 'Sine.InOut',
         onComplete: () => playPose(index + 1),
       });
     };
