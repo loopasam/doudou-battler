@@ -3,12 +3,13 @@ import { PLACEHOLDER_CARDS } from './cards';
 import { BattleEngine } from './engine';
 import {
   ACTIVE_SNAKE_OFFSETS,
+  BATTLE_TENSION_POSES,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
   WINNER_CELEBRATION_POSES,
+  WINNER_FIREWORK_BURSTS,
   WINNER_RESULT_SWAY_POSES,
-  WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
@@ -433,21 +434,16 @@ export class GameScene extends Phaser.Scene {
           scaleX: 1,
           duration: 460,
           ease: 'Back.Out',
-          onComplete: () => this.playWinnerTilt(state, deckCounts),
+          onComplete: () => this.playBattleTension(state, deckCounts),
         });
       },
     });
   }
 
-  private playWinnerTilt(state: GameSnapshot, deckCounts: DeckCounts): void {
-    const winner = state.lastResult?.winner;
-    const winnerView = winner === 'player'
-      ? this.playerCardView
-      : winner === 'ai'
-        ? this.aiCardView
-        : undefined;
-
-    if (!winnerView) {
+  private playBattleTension(state: GameSnapshot, deckCounts: DeckCounts): void {
+    const playerView = this.playerCardView;
+    const aiView = this.aiCardView;
+    if (!playerView || !aiView) {
       this.time.delayedCall(
         GAME_TIMING.resultPauseMs,
         () => this.finishRoundReveal(state, deckCounts),
@@ -455,30 +451,36 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.time.delayedCall(GAME_TIMING.winnerTiltLeadMs, () => {
+    const playerOrigin = { x: playerView.x, y: playerView.y };
+    const aiOrigin = { x: aiView.x, y: aiView.y };
+    const playPose = (index: number): void => {
+      const pose = BATTLE_TENSION_POSES[index];
+      if (!pose) {
+        this.finishRoundReveal(state, deckCounts);
+        return;
+      }
+
       this.tweens.add({
-        targets: winnerView,
-        angle: WINNER_TILT_ANGLES[0],
-        duration: GAME_TIMING.winnerTiltLeanMs,
+        targets: playerView,
+        x: playerOrigin.x + pose.offsetX,
+        y: playerOrigin.y + pose.offsetY,
+        angle: pose.angle,
+        duration: pose.durationMs,
         ease: 'Sine.InOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: winnerView,
-            angle: WINNER_TILT_ANGLES[1],
-            duration: GAME_TIMING.winnerTiltSweepMs,
-            ease: 'Sine.InOut',
-            onComplete: () => {
-              this.tweens.add({
-                targets: winnerView,
-                angle: WINNER_TILT_ANGLES[2],
-                duration: GAME_TIMING.winnerTiltRecoverMs,
-                ease: 'Sine.InOut',
-                onComplete: () => this.finishRoundReveal(state, deckCounts),
-              });
-            },
-          });
-        },
+        onComplete: () => playPose(index + 1),
       });
+      this.tweens.add({
+        targets: aiView,
+        x: aiOrigin.x - pose.offsetX,
+        y: aiOrigin.y - pose.offsetY,
+        angle: -pose.angle,
+        duration: pose.durationMs,
+        ease: 'Sine.InOut',
+      });
+    };
+
+    this.time.delayedCall(GAME_TIMING.battleTensionLeadMs, () => {
+      playPose(0);
     });
   }
 
@@ -500,9 +502,12 @@ export class GameScene extends Phaser.Scene {
     if (winnerView) {
       this.cameras.main.shake(300, 0.012);
       const winnerColor = winner === 'player' ? COLORS.player : COLORS.ai;
+      this.drawWinnerFireworks(winnerView, winnerColor);
       this.drawWinnerCardGlow(winnerView, winnerColor);
 
       if (loserView) {
+        const loserColor = winner === 'player' ? COLORS.ai : COLORS.player;
+        this.drawLoserReaction(loserView, loserColor);
         this.tweens.add({
           targets: loserView,
           alpha: 0.46,
@@ -913,6 +918,119 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.InOut',
       yoyo: true,
       repeat: -1,
+    });
+  }
+
+  private drawWinnerFireworks(
+    group: Phaser.GameObjects.Container,
+    color: number,
+  ): void {
+    const fireworks = this.add.container(group.x, group.y);
+    this.ui.addAt(fireworks, 0);
+
+    WINNER_FIREWORK_BURSTS.forEach((config, burstIndex) => {
+      const burst = this.add.container(config.offsetX, config.offsetY)
+        .setAlpha(0)
+        .setScale(0.18);
+      const rays = this.add.graphics();
+
+      for (let rayIndex = 0; rayIndex < 10; rayIndex += 1) {
+        const angle = (Math.PI * 2 * rayIndex) / 10;
+        const innerRadius = 10;
+        const outerRadius = rayIndex % 2 === 0 ? 38 : 29;
+        const rayColor = rayIndex % 2 === 0 ? color : COLORS.paper;
+        rays.lineStyle(rayIndex % 2 === 0 ? 3 : 2, rayColor, 0.9);
+        rays.lineBetween(
+          Math.cos(angle) * innerRadius,
+          Math.sin(angle) * innerRadius,
+          Math.cos(angle) * outerRadius,
+          Math.sin(angle) * outerRadius,
+        );
+        rays.fillStyle(rayColor, 0.95);
+        rays.fillCircle(
+          Math.cos(angle) * (outerRadius + 5),
+          Math.sin(angle) * (outerRadius + 5),
+          rayIndex % 2 === 0 ? 3.5 : 2.5,
+        );
+      }
+
+      const ring = this.add.circle(0, 0, 8, COLORS.panel, 0)
+        .setStrokeStyle(3, color, 0.9);
+      burst.add([rays, ring]);
+      fireworks.add(burst);
+
+      this.tweens.add({
+        targets: burst,
+        alpha: 1,
+        scaleX: config.scale,
+        scaleY: config.scale,
+        angle: burstIndex % 2 === 0 ? 8 : -8,
+        delay: config.delayMs,
+        duration: 290,
+        ease: 'Back.Out',
+        onComplete: () => {
+          this.tweens.add({
+            targets: burst,
+            alpha: 0.34,
+            scaleX: config.scale * 0.88,
+            scaleY: config.scale * 0.88,
+            angle: burstIndex % 2 === 0 ? -5 : 5,
+            duration: 360 + burstIndex * 43,
+            ease: 'Sine.InOut',
+            yoyo: true,
+            repeat: -1,
+          });
+        },
+      });
+    });
+  }
+
+  private drawLoserReaction(
+    group: Phaser.GameObjects.Container,
+    color: number,
+  ): void {
+    const direction = group.x < GAME_LAYOUT.width / 2 ? 1 : -1;
+    const reaction = this.add.container(group.x + direction * 108, group.y - 164)
+      .setAlpha(0)
+      .setScale(0.25);
+    this.ui.add(reaction);
+
+    const badge = this.add.circle(0, 0, 42, COLORS.panel, 0.98)
+      .setStrokeStyle(4, color, 0.95);
+    const face = this.add.circle(0, 0, 30, COLORS.paper, 0.96)
+      .setStrokeStyle(2, COLORS.ink, 0.9);
+    const leftEye = this.add.circle(-9, -7, 3.5, COLORS.ink);
+    const rightEye = this.add.circle(9, -7, 3.5, COLORS.ink);
+    const expression = this.add.graphics();
+    expression.lineStyle(3, COLORS.ink, 1);
+    expression.lineBetween(-15, -15, -7, -12);
+    expression.lineBetween(15, -15, 7, -12);
+    expression.beginPath();
+    expression.arc(0, 14, 14, Math.PI, Math.PI * 2, false);
+    expression.strokePath();
+
+    const labelPanel = this.add.rectangle(0, 53, 88, 25, COLORS.panel, 0.98)
+      .setStrokeStyle(2, color, 0.9);
+    const label = this.makeText(0, 53, 'OH NO...', 11, color).setOrigin(0.5);
+    reaction.add([badge, face, leftEye, rightEye, expression, labelPanel, label]);
+
+    this.tweens.add({
+      targets: reaction,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 360,
+      ease: 'Back.Out',
+      onComplete: () => {
+        this.tweens.add({
+          targets: reaction,
+          y: reaction.y + 4,
+          duration: 620,
+          ease: 'Sine.InOut',
+          yoyo: true,
+          repeat: -1,
+        });
+      },
     });
   }
 

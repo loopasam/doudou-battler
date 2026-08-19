@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_SNAKE_OFFSETS,
+  BATTLE_TENSION_POSES,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
   WINNER_CELEBRATION_POSES,
+  WINNER_FIREWORK_BURSTS,
   WINNER_RESULT_SWAY_POSES,
-  WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
@@ -76,14 +77,17 @@ describe('wireframe rendering metrics', () => {
     expect(GAME_TIMING.resultPauseMs).toBeLessThanOrEqual(1_200);
   });
 
-  it('uses a subtle symmetric winner tilt before the result highlight', () => {
-    expect(WINNER_TILT_ANGLES).toEqual([-2.4, 2.4, 0]);
-    expect(Math.max(...WINNER_TILT_ANGLES.map(Math.abs))).toBeLessThanOrEqual(3);
+  it('builds neutral battle tension by oscillating both cards in mirrored poses', () => {
+    const angles = BATTLE_TENSION_POSES.map(({ angle }) => angle);
+    const duration = BATTLE_TENSION_POSES.reduce<number>(
+      (total, pose) => total + pose.durationMs,
+      GAME_TIMING.battleTensionLeadMs,
+    );
 
-    const duration = GAME_TIMING.winnerTiltLeadMs
-      + GAME_TIMING.winnerTiltLeanMs
-      + GAME_TIMING.winnerTiltSweepMs
-      + GAME_TIMING.winnerTiltRecoverMs;
+    expect(angles.slice(0, 3).map(Math.abs)).toEqual([1.1, 1.8, 2.4]);
+    expect(angles.some((angle) => angle < 0)).toBe(true);
+    expect(angles.some((angle) => angle > 0)).toBe(true);
+    expect(BATTLE_TENSION_POSES.at(-1)).toMatchObject({ offsetX: 0, angle: 0 });
     expect(duration).toBeGreaterThanOrEqual(800);
     expect(duration).toBeLessThanOrEqual(1_200);
   });
@@ -115,6 +119,19 @@ describe('wireframe rendering metrics', () => {
     expect(new Set(swayAngles.map(Math.abs)).size).toBeGreaterThan(2);
     expect(new Set(swayDurations).size).toBe(WINNER_RESULT_SWAY_POSES.length);
     expect(swayDurations.reduce((total, duration) => total + duration, 0)).toBeGreaterThanOrEqual(1_500);
+  });
+
+  it('places staggered fireworks around every side of the winning card', () => {
+    const offsetsX = WINNER_FIREWORK_BURSTS.map(({ offsetX }) => offsetX);
+    const offsetsY = WINNER_FIREWORK_BURSTS.map(({ offsetY }) => offsetY);
+    const delays = WINNER_FIREWORK_BURSTS.map(({ delayMs }) => delayMs);
+
+    expect(WINNER_FIREWORK_BURSTS.length).toBeGreaterThanOrEqual(5);
+    expect(offsetsX.some((offset) => offset < 0)).toBe(true);
+    expect(offsetsX.some((offset) => offset > 0)).toBe(true);
+    expect(offsetsY.some((offset) => offset < 0)).toBe(true);
+    expect(offsetsY.some((offset) => offset > 0)).toBe(true);
+    expect(new Set(delays).size).toBe(WINNER_FIREWORK_BURSTS.length);
   });
 
   it('deals each next card from its own deck along an inward arc', () => {

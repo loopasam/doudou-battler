@@ -24,16 +24,20 @@ export const GAME_LAYOUT = {
 export const GAME_TIMING = {
   aiThinkMs: 1_550,
   resultPauseMs: 850,
-  winnerTiltLeadMs: 180,
-  winnerTiltLeanMs: 160,
-  winnerTiltSweepMs: 300,
-  winnerTiltRecoverMs: 220,
+  battleTensionLeadMs: 120,
   dealSettleMs: 220,
   dealMs: 820,
 } as const;
 
-export const WINNER_TILT_ANGLES = [-2.4, 2.4, 0] as const;
 export const ACTIVE_SNAKE_OFFSETS = [0, 0.25, 0.5, 0.75] as const;
+
+export const BATTLE_TENSION_POSES = [
+  { offsetX: 2, offsetY: -1, angle: 1.1, durationMs: 130 },
+  { offsetX: -3, offsetY: 1, angle: -1.8, durationMs: 160 },
+  { offsetX: 4, offsetY: -2, angle: 2.4, durationMs: 140 },
+  { offsetX: -2, offsetY: 1, angle: -1.35, durationMs: 170 },
+  { offsetX: 0, offsetY: 0, angle: 0, durationMs: 180 },
+] as const;
 
 export const WINNER_CELEBRATION_POSES = [
   { offsetX: -10, offsetY: -16, angle: -4.4, scale: 1.07, durationMs: 65 },
@@ -48,6 +52,15 @@ export const WINNER_RESULT_SWAY_POSES = [
   { offsetX: 2, offsetY: 1, angle: 0.85, scale: 1.052, durationMs: 520 },
   { offsetX: -1, offsetY: -2, angle: -0.65, scale: 1.06, durationMs: 440 },
   { offsetX: 1, offsetY: 0, angle: 1.1, scale: 1.055, durationMs: 610 },
+] as const;
+
+export const WINNER_FIREWORK_BURSTS = [
+  { offsetX: -188, offsetY: -162, delayMs: 0, scale: 1 },
+  { offsetX: 188, offsetY: -150, delayMs: 120, scale: 0.92 },
+  { offsetX: -192, offsetY: 118, delayMs: 240, scale: 0.86 },
+  { offsetX: 190, offsetY: 126, delayMs: 60, scale: 1.04 },
+  { offsetX: -180, offsetY: -8, delayMs: 300, scale: 0.76 },
+  { offsetX: 182, offsetY: 18, delayMs: 180, scale: 0.8 },
 ] as const;
 
 export interface CardBorderPoint {
