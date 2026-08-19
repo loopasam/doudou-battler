@@ -13,6 +13,7 @@ import {
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
+  getDeckStackLabel,
   getLastStatRowBottom,
   getRoundWinnerLabel,
   getStatRowCenter,
@@ -37,6 +38,13 @@ describe('wireframe rendering metrics', () => {
     expect(getDeckCountsBeforeTransfer(9, 11, 'ai', 2)).toEqual({ player: 10, ai: 10 });
     expect(getDeckCountsBeforeTransfer(9, 9, 'tie', 0)).toEqual({ player: 10, ai: 10 });
     expect(getDeckCountsBeforeTransfer(13, 7, 'player', 4)).toEqual({ player: 10, ai: 8 });
+  });
+
+  it('prints the live count directly on the top deck card', () => {
+    expect(getDeckStackLabel(0)).toBe('0');
+    expect(getDeckStackLabel(9)).toBe('9');
+    expect(getDeckStackLabel(10)).toBe('10');
+    expect(getDeckStackLabel(20)).toBe('20');
   });
 
   it('centers the next action between the two cards', () => {

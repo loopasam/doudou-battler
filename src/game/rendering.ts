@@ -88,6 +88,10 @@ export function getStatRowCenter(index: number): number {
   return CARD_LAYOUT.statRowStart + index * CARD_LAYOUT.statRowGap;
 }
 
+export function getDeckStackLabel(count: number): string {
+  return String(count);
+}
+
 export function getLastStatRowBottom(): number {
   return getStatRowCenter(CARD_LAYOUT.statRowCount - 1) + CARD_LAYOUT.statRowHeight / 2;
 }

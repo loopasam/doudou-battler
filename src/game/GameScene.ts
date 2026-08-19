@@ -15,6 +15,7 @@ import {
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
+  getDeckStackLabel,
   getRoundWinnerLabel,
   getStatRowCenter,
   getTextResolution,
@@ -265,7 +266,9 @@ export class GameScene extends Phaser.Scene {
     if (visibleLayers === 0) {
       const empty = this.add.rectangle(0, -4, 100, 146, COLORS.panel, 0.18)
         .setStrokeStyle(2, accent, 0.35);
-      group.add(empty);
+      const emptyCount = this.makeText(0, -4, getDeckStackLabel(count), 25, accent)
+        .setOrigin(0.5);
+      group.add([empty, emptyCount]);
     }
 
     for (let index = 0; index < visibleLayers; index += 1) {
@@ -280,16 +283,11 @@ export class GameScene extends Phaser.Scene {
           .setStrokeStyle(1, accent, 0.72);
         const stripeOne = this.add.rectangle(offsetX, offsetY - 24, 54, 3, accent, 0.72);
         const stripeTwo = this.add.rectangle(offsetX, offsetY + 24, 54, 3, accent, 0.72);
-        const mark = this.makeText(offsetX, offsetY, owner === 'player' ? 'P' : 'AI', 25, accent)
+        const mark = this.makeText(offsetX, offsetY, getDeckStackLabel(count), 25, accent)
           .setOrigin(0.5);
         group.add([inset, stripeOne, stripeTwo, mark]);
       }
     }
-
-    const countBadge = this.add.circle(0, 118, 26, active ? accent : COLORS.paper)
-      .setStrokeStyle(3, COLORS.ink);
-    const countLabel = this.makeText(0, 118, String(count), 20, COLORS.ink).setOrigin(0.5);
-    group.add([countBadge, countLabel]);
     return group;
   }
 
