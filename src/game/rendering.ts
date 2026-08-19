@@ -24,9 +24,15 @@ export const GAME_LAYOUT = {
 export const GAME_TIMING = {
   aiThinkMs: 1_550,
   resultPauseMs: 850,
+  winnerTiltLeadMs: 180,
+  winnerTiltLeanMs: 160,
+  winnerTiltSweepMs: 300,
+  winnerTiltRecoverMs: 220,
   dealSettleMs: 220,
   dealMs: 820,
 } as const;
+
+export const WINNER_TILT_ANGLES = [-2.4, 2.4, 0] as const;
 
 export interface CardBorderPoint {
   x: number;

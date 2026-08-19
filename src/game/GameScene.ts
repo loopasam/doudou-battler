@@ -5,6 +5,7 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
@@ -429,12 +430,52 @@ export class GameScene extends Phaser.Scene {
           scaleX: 1,
           duration: 460,
           ease: 'Back.Out',
-          onComplete: () => this.time.delayedCall(
-            GAME_TIMING.resultPauseMs,
-            () => this.finishRoundReveal(state, deckCounts),
-          ),
+          onComplete: () => this.playWinnerTilt(state, deckCounts),
         });
       },
+    });
+  }
+
+  private playWinnerTilt(state: GameSnapshot, deckCounts: DeckCounts): void {
+    const winner = state.lastResult?.winner;
+    const winnerView = winner === 'player'
+      ? this.playerCardView
+      : winner === 'ai'
+        ? this.aiCardView
+        : undefined;
+
+    if (!winnerView) {
+      this.time.delayedCall(
+        GAME_TIMING.resultPauseMs,
+        () => this.finishRoundReveal(state, deckCounts),
+      );
+      return;
+    }
+
+    this.time.delayedCall(GAME_TIMING.winnerTiltLeadMs, () => {
+      this.tweens.add({
+        targets: winnerView,
+        angle: WINNER_TILT_ANGLES[0],
+        duration: GAME_TIMING.winnerTiltLeanMs,
+        ease: 'Sine.InOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: winnerView,
+            angle: WINNER_TILT_ANGLES[1],
+            duration: GAME_TIMING.winnerTiltSweepMs,
+            ease: 'Sine.InOut',
+            onComplete: () => {
+              this.tweens.add({
+                targets: winnerView,
+                angle: WINNER_TILT_ANGLES[2],
+                duration: GAME_TIMING.winnerTiltRecoverMs,
+                ease: 'Sine.InOut',
+                onComplete: () => this.finishRoundReveal(state, deckCounts),
+              });
+            },
+          });
+        },
+      });
     });
   }
 

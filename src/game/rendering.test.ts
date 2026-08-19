@@ -3,6 +3,7 @@ import {
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
+  WINNER_TILT_ANGLES,
   getCardBorderTrailPoint,
   getCardDealPose,
   getDeckCountsBeforeTransfer,
@@ -68,6 +69,18 @@ describe('wireframe rendering metrics', () => {
   it('leaves time to compare both revealed cards before declaring the winner', () => {
     expect(GAME_TIMING.resultPauseMs).toBeGreaterThanOrEqual(800);
     expect(GAME_TIMING.resultPauseMs).toBeLessThanOrEqual(1_200);
+  });
+
+  it('uses a subtle symmetric winner tilt before the result highlight', () => {
+    expect(WINNER_TILT_ANGLES).toEqual([-2.4, 2.4, 0]);
+    expect(Math.max(...WINNER_TILT_ANGLES.map(Math.abs))).toBeLessThanOrEqual(3);
+
+    const duration = GAME_TIMING.winnerTiltLeadMs
+      + GAME_TIMING.winnerTiltLeanMs
+      + GAME_TIMING.winnerTiltSweepMs
+      + GAME_TIMING.winnerTiltRecoverMs;
+    expect(duration).toBeGreaterThanOrEqual(800);
+    expect(duration).toBeLessThanOrEqual(1_200);
   });
 
   it('deals each next card from its own deck along an inward arc', () => {
