@@ -91,7 +91,8 @@ jobs:
 
           studio_url="${site_url}studio/"
           studio_html="$(curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors "$studio_url")"
-          grep --fixed-strings '<title>Doudou Art Lab</title>' <<< "$studio_html"
-          grep --fixed-strings 'From cuddle' <<< "$studio_html"
+          grep --fixed-strings '<title>Doudou Card Factory</title>' <<< "$studio_html"
+          grep --fixed-strings 'Meet the next' <<< "$studio_html"
           curl --fail --silent --show-error --head --retry 5 --retry-all-errors "${site_url}art-studio/doudou-original.webp"
           curl --fail --silent --show-error --head --retry 5 --retry-all-errors "${site_url}art-studio/fort-knight-concept.png"
+          curl --fail --silent --show-error --head --retry 5 --retry-all-errors "${site_url}assets/cards/curation-showcase.json"
