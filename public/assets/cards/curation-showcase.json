@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "mode": "showcase",
+  "writable": false,
+  "style": {
+    "id": "storybook-fort-v1",
+    "name": "Cozy Storybook Contenders",
+    "promptVersion": "storybook-fort-v1"
+  },
+  "items": [
+    {
+      "id": "fort-knight",
+      "name": "Fort Knight",
+      "status": "approved",
+      "referenceUrl": "../art-studio/doudou-original.webp",
+      "childNotes": "Cozy, brave and playful.",
+      "reviewNotes": "The style anchor for the collection.",
+      "artCandidates": [
+        {
+          "id": "art-01",
+          "url": "../art-studio/fort-knight-concept.png",
+          "promptVersion": "storybook-fort-v1",
+          "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+      ],
+      "winSoundCandidates": [],
+      "loseSoundCandidates": [],
+      "selectedArtId": "art-01",
+      "updatedAt": "2026-08-01T00:00:00.000Z"
+    }
+  ]
+}

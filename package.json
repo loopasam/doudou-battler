@@ -12,7 +12,11 @@
     "test:e2e": "playwright test",
     "test:all": "npm run test:coverage && npm run build && npm run test:e2e",
     "tdd": "vitest",
-    "tdd:e2e": "playwright test --ui"
+    "tdd:e2e": "playwright test --ui",
+    "assets:intake": "node scripts/asset-pipeline.mjs intake",
+    "assets:candidate": "node scripts/asset-pipeline.mjs candidate",
+    "assets:sounds": "node scripts/asset-pipeline.mjs sounds",
+    "assets:status": "node scripts/asset-pipeline.mjs status"
   },
   "dependencies": {
     "phaser": "4.2.1"

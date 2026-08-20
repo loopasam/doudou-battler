@@ -3,126 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Doudou Art Lab — explore how a beloved plush becomes game artwork."
-    />
-    <meta name="theme-color" content="#0d1b1d" />
-    <title>Doudou Art Lab</title>
+    <meta name="description" content="Review and curate new Doudou Battler card characters." />
+    <meta name="theme-color" content="#102323" />
+    <title>Doudou Card Factory</title>
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href="../" aria-label="Return to Doudou Battler">
         <span class="brand-mark" aria-hidden="true">D</span>
-        <span>
-          <strong>Doudou</strong>
-          <small>Art Lab / 001</small>
-        </span>
+        <span><strong>Doudou</strong><small>Card Factory</small></span>
       </a>
-      <a class="game-link" href="../">
-        <span aria-hidden="true">←</span>
-        Back to battle
-      </a>
+      <div class="header-actions">
+        <span class="connection-badge" data-connection>Connecting…</span>
+        <a class="game-link" href="../">← Back to battle</a>
+      </div>
     </header>
 
     <main>
       <section class="intro" aria-labelledby="studio-title">
-        <p class="eyebrow"><span></span> Character experiment 001</p>
-        <h1 id="studio-title">From cuddle<br />to <em>contender.</em></h1>
-        <p class="lede">
-          One familiar plush, reimagined as the brave guardian of a blanket-fort kingdom.
-          Drag the reveal to explore the transformation.
-        </p>
-      </section>
-
-      <section class="workbench" aria-label="Artwork comparison studio">
-        <div class="art-column">
-          <div class="art-stage" data-art-stage data-mode="compare" style="--reveal: 58%">
-            <div class="image-layer original-layer">
-              <img
-                src="../art-studio/doudou-original.webp"
-                alt="Original cream plush dog reference"
-              />
-              <span class="image-label">Reference</span>
-            </div>
-            <div class="image-layer concept-layer">
-              <img
-                src="../art-studio/fort-knight-concept.png"
-                alt="Fantasy hero artwork based on the cream plush dog"
-              />
-              <span class="image-label">Concept 01</span>
-            </div>
-            <div class="reveal-line" aria-hidden="true">
-              <span>↔</span>
-            </div>
-            <div class="grain" aria-hidden="true"></div>
-          </div>
-
-          <div class="stage-controls">
-            <div class="mode-picker" aria-label="Artwork view">
-              <button type="button" data-mode-button="original" aria-pressed="false">Original</button>
-              <button type="button" data-mode-button="compare" aria-pressed="true">Compare</button>
-              <button type="button" data-mode-button="concept" aria-pressed="false">Concept</button>
-            </div>
-            <label class="reveal-control">
-              <span>Reveal concept artwork</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value="58"
-                aria-label="Reveal concept artwork"
-                data-reveal-control
-              />
-              <output data-reveal-output>58%</output>
-            </label>
-          </div>
+        <div>
+          <p class="eyebrow"><span></span> Private curation desk</p>
+          <h1 id="studio-title">Meet the next <em>contender.</em></h1>
         </div>
-
-        <aside class="art-notes" aria-label="Concept notes">
-          <div class="edition"><span>01</span> / 01</div>
-          <p class="notes-label">Working title</p>
-          <h2>Fort Knight</h2>
-          <p class="concept-copy">
-            A gentle guardian whose courage is measured in comfort. The original fleece,
-            eye patch, floppy ears, and long limbs stay at the heart of the design.
-          </p>
-
-          <dl class="art-direction">
-            <div>
-              <dt>World</dt>
-              <dd>Blanket-fort fantasy</dd>
-            </div>
-            <div>
-              <dt>Medium</dt>
-              <dd>Painterly storybook</dd>
-            </div>
-            <div>
-              <dt>Energy</dt>
-              <dd>Cozy · Brave · Playful</dd>
-            </div>
-          </dl>
-
-          <div class="palette" aria-label="Artwork palette">
-            <span style="--swatch: #e7c98c"><i>Warm fleece</i></span>
-            <span style="--swatch: #1d6969"><i>Hero teal</i></span>
-            <span style="--swatch: #bc5841"><i>Fort coral</i></span>
-            <span style="--swatch: #132f38"><i>Night navy</i></span>
-          </div>
-
-          <p class="experiment-note">
-            <span>Lab note</span>
-            This is an isolated art-direction test. It is not used by the game deck yet.
-          </p>
-        </aside>
+        <p class="lede">Compare the toy with its storybook character, listen to its reactions, then approve it or ask for another try.</p>
       </section>
+
+      <section class="progress-strip" aria-label="Curation progress">
+        <div><strong data-progress-total>0</strong><span>Characters</span></div>
+        <div><strong data-progress-review>0</strong><span>To review</span></div>
+        <div><strong data-progress-redo>0</strong><span>Redo</span></div>
+        <div><strong data-progress-approved>0</strong><span>Approved</span></div>
+      </section>
+
+      <section class="studio-shell" aria-label="Card curation studio">
+        <aside class="queue-panel">
+          <div class="panel-heading"><p>Review queue</p><span data-queue-count>0 cards</span></div>
+          <div class="queue-list" data-queue-list></div>
+        </aside>
+        <section class="workspace" data-workspace aria-live="polite"></section>
+        <section class="empty-state" data-empty hidden>
+          <span aria-hidden="true">✦</span>
+          <h2>The workbench is clear</h2>
+          <p>Upload another toy photo in our Codex conversation and I’ll prepare the next character here.</p>
+        </section>
+      </section>
+      <p class="app-status" data-app-status role="status" aria-live="polite"></p>
     </main>
 
-    <footer>
-      <span>Doudou Battler art exploration</span>
-      <span>Built for the web · 2026</span>
-    </footer>
+    <template data-workspace-template>
+      <div class="review-grid">
+        <div class="visual-review">
+          <div class="visual-heading">
+            <div><p class="section-kicker">Visual review</p><h2 data-item-name></h2></div>
+            <span class="status-pill" data-item-status></span>
+          </div>
+          <div class="image-pair">
+            <figure><img data-reference-image alt="Toy reference" /><figcaption>Private reference</figcaption></figure>
+            <figure class="candidate-frame"><img data-candidate-image alt="Generated card artwork" /><figcaption data-candidate-caption>Candidate</figcaption></figure>
+          </div>
+          <div class="candidate-picker" data-art-candidates aria-label="Artwork candidates"></div>
+          <p class="privacy-note"><span aria-hidden="true">◉</span> The reference stays local. Only approved art enters the game.</p>
+        </div>
 
+        <aside class="review-controls">
+          <form data-details-form>
+            <p class="section-kicker">Character details</p>
+            <label>Card name<input name="name" maxlength="80" required /></label>
+            <label>What the kids told us<textarea name="childNotes" rows="3" maxlength="1000"></textarea></label>
+            <label>Redo notes<textarea name="reviewNotes" rows="4" maxlength="2000" placeholder="What should change in the next version?"></textarea></label>
+            <button class="quiet-button" type="submit">Save details</button>
+          </form>
+          <div class="sound-section">
+            <p class="section-kicker">Reaction sounds</p>
+            <div class="sound-row" data-win-sounds></div>
+            <div class="sound-row" data-lose-sounds></div>
+          </div>
+          <div class="decision-box">
+            <p data-decision-copy>Choose the strongest version, then make the call.</p>
+            <div class="decision-actions">
+              <button class="redo-button" type="button" data-redo>↻ Try again</button>
+              <button class="approve-button" type="button" data-approve>Approve card ✓</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </template>
     <script type="module" src="/src/studio/main.ts"></script>
   </body>
 </html>
