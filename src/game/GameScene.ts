@@ -21,6 +21,12 @@ import {
   getTextResolution,
   type DeckCounts,
 } from './rendering';
+import {
+  DEFAULT_GAME_SETTINGS,
+  formatStatValue,
+  getSettingsLabel,
+  type GameSettings,
+} from './settings';
 import { STAT_KEYS, type BattleCard, type GameSnapshot, type Side, type StatKey } from './types';
 
 interface RenderOptions {
@@ -53,6 +59,7 @@ const TEXT_RESOLUTION = getTextResolution();
 export class GameScene extends Phaser.Scene {
   private engine!: BattleEngine;
   private ui!: Phaser.GameObjects.Container;
+  private settings: GameSettings = { ...DEFAULT_GAME_SETTINGS };
   private playerCardView?: Phaser.GameObjects.Container;
   private aiCardView?: Phaser.GameObjects.Container;
   private playerDeckView?: Phaser.GameObjects.Container;
@@ -61,6 +68,10 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('battle');
+  }
+
+  init(settings: Partial<GameSettings> = {}): void {
+    this.settings = { ...DEFAULT_GAME_SETTINGS, ...settings };
   }
 
   create(): void {
@@ -211,6 +222,7 @@ export class GameScene extends Phaser.Scene {
   private drawHeader(state: GameSnapshot, deckCounts: DeckCounts): void {
     this.addUiText(48, 42, 'DOUDOU // BATTLER', 28, COLORS.paper);
     this.addUiText(48, 80, `ROUND ${String(state.round).padStart(2, '0')}`, 16, COLORS.muted);
+    this.addUiText(48, 108, getSettingsLabel(this.settings), 12, COLORS.accent);
 
     const chooserColor = state.chooser === 'player' ? COLORS.player : COLORS.ai;
     const chooserText = state.chooser === 'player' ? 'YOUR PICK' : 'AI PICK';
@@ -359,7 +371,13 @@ export class GameScene extends Phaser.Scene {
       const row = this.add.rectangle(0, rowY, 268, CARD_LAYOUT.statRowHeight, rowColor)
         .setStrokeStyle(2, selected ? accent : COLORS.ink);
       const label = this.makeText(-118, rowY, LABELS[stat], 15, COLORS.ink).setOrigin(0, 0.5);
-      const value = this.makeText(118, rowY, String(card.stats[stat]), 24, COLORS.ink).setOrigin(1, 0.5);
+      const value = this.makeText(
+        118,
+        rowY,
+        formatStatValue(card.stats[stat], this.settings.valueDisplay),
+        this.settings.valueDisplay === 'stars' ? 19 : 24,
+        COLORS.ink,
+      ).setOrigin(1, 0.5);
       group.add([row, label, value]);
 
       if (canChoose) {
@@ -1009,7 +1027,7 @@ export class GameScene extends Phaser.Scene {
     this.addUiText(640, 285, title, 54, color).setOrigin(0.5);
     this.addUiText(640, 350, `${state.playerCount}  :  ${state.aiCount}`, 32, COLORS.paper).setOrigin(0.5);
     this.addUiText(640, 400, 'FINAL CARD COUNT', 15, COLORS.muted).setOrigin(0.5);
-    this.makeButton(640, 485, 230, 52, 'PLAY AGAIN', color, () => this.startGame());
+    this.makeButton(640, 485, 230, 52, 'PLAY AGAIN', color, () => this.scene.start('start'));
   }
 
   private makeButton(

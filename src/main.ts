@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import './style.css';
 import { GameScene } from './game/GameScene';
+import { StartScene } from './game/StartScene';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -8,7 +9,7 @@ new Phaser.Game({
   width: 1280,
   height: 720,
   backgroundColor: '#11100f',
-  scene: [GameScene],
+  scene: [StartScene, GameScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

@@ -6,7 +6,12 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/game/engine.ts', 'src/game/cards.ts', 'src/game/rendering.ts'],
+      include: [
+        'src/game/engine.ts',
+        'src/game/cards.ts',
+        'src/game/rendering.ts',
+        'src/game/settings.ts',
+      ],
       reporter: ['text', 'json-summary'],
       thresholds: {
         lines: 90,
