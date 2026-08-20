@@ -29,12 +29,17 @@ const VALUE_DISPLAY_LABELS: Record<ValueDisplayMode, string> = {
 
 export function formatStatValue(value: number, mode: ValueDisplayMode): string {
   if (mode === 'stars') {
-    const filled = Math.min(Math.max(Math.ceil(value / 20), 1), 5);
+    const filled = getStatBattleValue(value, mode);
     return `${'★'.repeat(filled)}${'☆'.repeat(5 - filled)}`;
   }
 
-  if (mode === 'rounded') return String(Math.round(value / 10) * 10);
-  return String(value);
+  return String(getStatBattleValue(value, mode));
+}
+
+export function getStatBattleValue(value: number, mode: ValueDisplayMode): number {
+  if (mode === 'stars') return Math.min(Math.max(Math.ceil(value / 20), 1), 5);
+  if (mode === 'rounded') return Math.round(value / 10) * 10;
+  return value;
 }
 
 export function getSettingsLabel(settings: GameSettings): string {

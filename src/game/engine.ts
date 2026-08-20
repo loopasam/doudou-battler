@@ -8,6 +8,7 @@ import {
 } from './types';
 
 type RandomSource = () => number;
+type StatValueResolver = (value: number) => number;
 
 export class BattleEngine {
   private playerDeck: BattleCard[];
@@ -21,6 +22,7 @@ export class BattleEngine {
   constructor(
     cards: BattleCard[],
     private readonly random: RandomSource = Math.random,
+    private readonly getBattleValue: StatValueResolver = (value) => value,
   ) {
     if (cards.length < 2 || cards.length % 2 !== 0) {
       throw new Error('The deck must contain an even number of at least two cards.');
@@ -53,7 +55,9 @@ export class BattleEngine {
 
     const card = this.aiDeck[0];
     return STAT_KEYS.reduce((best, candidate) =>
-      card.stats[candidate] > card.stats[best] ? candidate : best,
+      this.getBattleValue(card.stats[candidate]) > this.getBattleValue(card.stats[best])
+        ? candidate
+        : best,
     );
   }
 
@@ -68,8 +72,8 @@ export class BattleEngine {
       throw new Error('Both players need a card to start a round.');
     }
 
-    const playerValue = playerCard.stats[stat];
-    const aiValue = aiCard.stats[stat];
+    const playerValue = this.getBattleValue(playerCard.stats[stat]);
+    const aiValue = this.getBattleValue(aiCard.stats[stat]);
     const winner = playerValue === aiValue ? 'tie' : playerValue > aiValue ? 'player' : 'ai';
     let capturedCount = 0;
 

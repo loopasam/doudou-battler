@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BattleEngine } from './engine';
+import { getStatBattleValue, type ValueDisplayMode } from './settings';
 import type { BattleCard } from './types';
 
 const card = (
@@ -17,6 +18,8 @@ const deck = [
 ];
 
 const keepOrder = () => 0.999999;
+const useNumberStyle = (mode: ValueDisplayMode) =>
+  (value: number) => getStatBattleValue(value, mode);
 
 describe('BattleEngine', () => {
   it('rejects decks that cannot be split evenly', () => {
@@ -90,6 +93,59 @@ describe('BattleEngine', () => {
     const next = engine.advanceRound();
     expect(next.playerCard?.id).toBe('player-2');
     expect(next.aiCard?.id).toBe('ai-2');
+  });
+
+  it('treats matching displayed star tiers as a tie', () => {
+    const starDeck = [
+      card('player-1', 61, 10, 20),
+      card('player-2', 30, 20, 30),
+      card('ai-1', 79, 30, 40),
+      card('ai-2', 90, 40, 50),
+    ];
+    const result = new BattleEngine(starDeck, keepOrder, useNumberStyle('stars'))
+      .selectStat('strength');
+    expect(result.lastResult?.winner).toBe('tie');
+    expect(result.playerCount).toBe(2);
+    expect(result.aiCount).toBe(2);
+  });
+
+  it('treats matching displayed rounded tens as a tie', () => {
+    const roundedDeck = [
+      card('player-1', 61, 10, 20),
+      card('player-2', 30, 20, 30),
+      card('ai-1', 64, 30, 40),
+      card('ai-2', 90, 40, 50),
+    ];
+    const result = new BattleEngine(roundedDeck, keepOrder, useNumberStyle('rounded'))
+      .selectStat('strength');
+    expect(result.lastResult?.winner).toBe('tie');
+  });
+
+  it('keeps full precision in exact-number battles', () => {
+    const exactDeck = [
+      card('player-1', 61, 10, 20),
+      card('player-2', 30, 20, 30),
+      card('ai-1', 64, 30, 40),
+      card('ai-2', 90, 40, 50),
+    ];
+    const result = new BattleEngine(exactDeck, keepOrder, useNumberStyle('exact'))
+      .selectStat('strength');
+    expect(result.lastResult?.winner).toBe('ai');
+  });
+
+  it('makes AI choices using the displayed number style', () => {
+    const roundedDeck = [
+      card('player-1', 90, 10, 10),
+      card('player-2', 10, 10, 10),
+      card('player-3', 10, 10, 10),
+      card('ai-1', 10, 10, 10),
+      card('ai-2', 10, 69, 71),
+      card('ai-3', 10, 10, 10),
+    ];
+    const engine = new BattleEngine(roundedDeck, keepOrder, useNumberStyle('rounded'));
+    engine.selectStat('strength');
+    engine.advanceRound();
+    expect(engine.chooseAiStat()).toBe('speed');
   });
 
   it('ends when one side collects the full deck', () => {

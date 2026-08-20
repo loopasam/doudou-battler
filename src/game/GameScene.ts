@@ -26,6 +26,7 @@ import {
   DEFAULT_GAME_SETTINGS,
   formatStatValue,
   getSettingsLabel,
+  getStatBattleValue,
   type GameSettings,
 } from './settings';
 import { STAT_KEYS, type BattleCard, type GameSnapshot, type Side, type StatKey } from './types';
@@ -83,7 +84,11 @@ export class GameScene extends Phaser.Scene {
 
   private startGame(): void {
     this.aiTimer?.remove(false);
-    this.engine = new BattleEngine(PLACEHOLDER_CARDS);
+    this.engine = new BattleEngine(
+      PLACEHOLDER_CARDS,
+      Math.random,
+      (value) => getStatBattleValue(value, this.settings.valueDisplay),
+    );
     this.playCardDeal();
   }
 
