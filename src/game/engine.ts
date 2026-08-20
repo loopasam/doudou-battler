@@ -12,7 +12,6 @@ type RandomSource = () => number;
 export class BattleEngine {
   private playerDeck: BattleCard[];
   private aiDeck: BattleCard[];
-  private pot: BattleCard[] = [];
   private chooser: Side = 'player';
   private phase: GameSnapshot['phase'] = 'awaiting-choice';
   private round = 1;
@@ -40,7 +39,6 @@ export class BattleEngine {
       phase: this.phase,
       playerCount: this.playerDeck.length,
       aiCount: this.aiDeck.length,
-      potCount: this.pot.length,
       playerCard: this.lastResult?.playerCard ?? this.playerDeck[0],
       aiCard: this.lastResult?.aiCard ?? this.aiDeck[0],
       lastResult: this.lastResult,
@@ -76,11 +74,11 @@ export class BattleEngine {
     let capturedCount = 0;
 
     if (winner === 'tie') {
-      this.pot.push(playerCard, aiCard);
+      this.playerDeck.push(playerCard);
+      this.aiDeck.push(aiCard);
     } else {
-      const captured = [...this.pot, playerCard, aiCard];
+      const captured = [playerCard, aiCard];
       capturedCount = captured.length;
-      this.pot = [];
       const orderedCapture = this.shuffle(captured);
       if (winner === 'player') {
         this.playerDeck.push(...orderedCapture);
@@ -113,12 +111,8 @@ export class BattleEngine {
 
   private finishGame(): void {
     if (this.playerDeck.length === 0 && this.aiDeck.length > 0) {
-      this.aiDeck.push(...this.pot);
-      this.pot = [];
       this.gameWinner = 'ai';
     } else if (this.aiDeck.length === 0 && this.playerDeck.length > 0) {
-      this.playerDeck.push(...this.pot);
-      this.pot = [];
       this.gameWinner = 'player';
     } else {
       this.gameWinner = 'draw';

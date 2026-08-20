@@ -12,6 +12,7 @@ import {
   WINNER_RESULT_SWAY_POSES,
   getCardBorderTrailPoint,
   getCardDealPose,
+  getCardTransferRecipient,
   getDeckCountsBeforeTransfer,
   getDeckStackLabel,
   getLastStatRowBottom,
@@ -34,10 +35,16 @@ describe('wireframe rendering metrics', () => {
   });
 
   it('holds the old deck thickness until captured cards finish moving', () => {
-    expect(getDeckCountsBeforeTransfer(11, 9, 'player', 2)).toEqual({ player: 10, ai: 10 });
-    expect(getDeckCountsBeforeTransfer(9, 11, 'ai', 2)).toEqual({ player: 10, ai: 10 });
-    expect(getDeckCountsBeforeTransfer(9, 9, 'tie', 0)).toEqual({ player: 10, ai: 10 });
-    expect(getDeckCountsBeforeTransfer(13, 7, 'player', 4)).toEqual({ player: 10, ai: 8 });
+    expect(getDeckCountsBeforeTransfer(11, 9, 'player')).toEqual({ player: 10, ai: 10 });
+    expect(getDeckCountsBeforeTransfer(9, 11, 'ai')).toEqual({ player: 10, ai: 10 });
+    expect(getDeckCountsBeforeTransfer(10, 10, 'tie')).toEqual({ player: 10, ai: 10 });
+  });
+
+  it('returns each tied card to its original owner', () => {
+    expect(getCardTransferRecipient('player', 'tie')).toBe('player');
+    expect(getCardTransferRecipient('ai', 'tie')).toBe('ai');
+    expect(getCardTransferRecipient('ai', 'player')).toBe('player');
+    expect(getCardTransferRecipient('player', 'ai')).toBe('ai');
   });
 
   it('prints the live count directly on the top deck card', () => {

@@ -158,11 +158,10 @@ export function getDeckCountsBeforeTransfer(
   playerCount: number,
   aiCount: number,
   winner: 'player' | 'ai' | 'tie',
-  capturedCount: number,
 ): DeckCounts {
   if (winner === 'player') {
     return {
-      player: playerCount - capturedCount + 1,
+      player: playerCount - 1,
       ai: aiCount + 1,
     };
   }
@@ -170,12 +169,16 @@ export function getDeckCountsBeforeTransfer(
   if (winner === 'ai') {
     return {
       player: playerCount + 1,
-      ai: aiCount - capturedCount + 1,
+      ai: aiCount - 1,
     };
   }
 
-  return {
-    player: playerCount + 1,
-    ai: aiCount + 1,
-  };
+  return { player: playerCount, ai: aiCount };
+}
+
+export function getCardTransferRecipient(
+  owner: 'player' | 'ai',
+  winner: 'player' | 'ai' | 'tie',
+): 'player' | 'ai' {
+  return winner === 'tie' ? owner : winner;
 }

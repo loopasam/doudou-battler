@@ -26,7 +26,6 @@ export interface GameSnapshot {
   phase: GamePhase;
   playerCount: number;
   aiCount: number;
-  potCount: number;
   playerCard?: BattleCard;
   aiCard?: BattleCard;
   lastResult?: RoundResult;

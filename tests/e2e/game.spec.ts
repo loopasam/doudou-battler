@@ -63,7 +63,7 @@ test('renders a battle and accepts a stat choice without runtime errors', async 
     },
   });
   await expect(status).toHaveText(
-    /Round 1\. Moving cards to (your deck|the AI deck|the pot)\./,
+    /Round 1\. (Moving cards to (your deck|the AI deck)|Returning each card to its owner)\./,
     { timeout: 10_000 },
   );
   await expect(status).toHaveText('Round 2. Dealing cards from both decks.');

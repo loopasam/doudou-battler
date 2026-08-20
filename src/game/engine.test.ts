@@ -73,17 +73,23 @@ describe('BattleEngine', () => {
     expect(() => engine.selectStat('strength')).toThrow('Both players need a card');
   });
 
-  it('places tied cards into the pot', () => {
+  it('returns tied cards to the bottom of their original decks', () => {
     const tiedDeck = [
       card('player-1', 50, 10, 20),
       card('player-2', 40, 20, 30),
       card('ai-1', 50, 30, 40),
       card('ai-2', 60, 40, 50),
     ];
-    const result = new BattleEngine(tiedDeck, keepOrder).selectStat('strength');
+    const engine = new BattleEngine(tiedDeck, keepOrder);
+    const result = engine.selectStat('strength');
     expect(result.lastResult?.winner).toBe('tie');
     expect(result.chooser).toBe('ai');
-    expect(result.potCount).toBe(2);
+    expect(result.playerCount).toBe(2);
+    expect(result.aiCount).toBe(2);
+
+    const next = engine.advanceRound();
+    expect(next.playerCard?.id).toBe('player-2');
+    expect(next.aiCard?.id).toBe('ai-2');
   });
 
   it('ends when one side collects the full deck', () => {
@@ -96,30 +102,16 @@ describe('BattleEngine', () => {
     expect(final.playerCount).toBe(2);
   });
 
-  it('awards an outstanding tie pot to the surviving AI', () => {
-    const potDeck = [
-      card('player-1', 10, 20, 30),
-      card('player-2', 50, 40, 30),
-      card('ai-1', 90, 20, 30),
-      card('ai-2', 50, 60, 70),
-    ];
-    const engine = new BattleEngine(potDeck, keepOrder);
-    expect(engine.selectStat('strength').lastResult?.winner).toBe('ai');
-    engine.advanceRound();
-    expect(engine.selectStat('strength').lastResult?.winner).toBe('tie');
-    const final = engine.advanceRound();
-    expect(final.gameWinner).toBe('ai');
-    expect(final.aiCount).toBe(4);
-    expect(final.potCount).toBe(0);
-  });
-
-  it('declares a draw when the final two cards tie', () => {
+  it('keeps a final tied pair in play instead of ending the game', () => {
     const tiedPair = [card('player', 50, 20, 30), card('ai', 50, 80, 70)];
     const engine = new BattleEngine(tiedPair, keepOrder);
     engine.selectStat('strength');
-    const final = engine.advanceRound();
-    expect(final.phase).toBe('game-over');
-    expect(final.gameWinner).toBe('draw');
-    expect(final.potCount).toBe(2);
+    const next = engine.advanceRound();
+    expect(next.phase).toBe('awaiting-choice');
+    expect(next.round).toBe(2);
+    expect(next.playerCount).toBe(1);
+    expect(next.aiCount).toBe(1);
+    expect(next.playerCard?.id).toBe('player');
+    expect(next.aiCard?.id).toBe('ai');
   });
 });

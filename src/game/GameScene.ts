@@ -14,6 +14,7 @@ import {
   WINNER_RESULT_SWAY_POSES,
   getCardBorderTrailPoint,
   getCardDealPose,
+  getCardTransferRecipient,
   getDeckCountsBeforeTransfer,
   getDeckStackLabel,
   getRoundWinnerLabel,
@@ -180,11 +181,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (transition === 'transferring' && state.lastResult) {
-      const destination = state.lastResult.winner === 'player'
-        ? 'your deck'
-        : state.lastResult.winner === 'ai'
-          ? 'the AI deck'
-          : 'the pot';
+      if (state.lastResult.winner === 'tie') {
+        status.textContent = `Round ${state.round}. Returning each card to its owner.`;
+        return;
+      }
+      const destination = state.lastResult.winner === 'player' ? 'your deck' : 'the AI deck';
       status.textContent = `Round ${state.round}. Moving cards to ${destination}.`;
       return;
     }
@@ -232,7 +233,6 @@ export class GameScene extends Phaser.Scene {
 
     this.addUiText(1230, 44, `YOU  ${deckCounts.player}`, 18, COLORS.player).setOrigin(1, 0);
     this.addUiText(1230, 72, `AI   ${deckCounts.ai}`, 18, COLORS.ai).setOrigin(1, 0);
-    this.addUiText(1230, 100, `POT  ${state.potCount}`, 14, COLORS.muted).setOrigin(1, 0);
   }
 
   private drawDeckStacks(state: GameSnapshot, counts: DeckCounts): void {
@@ -413,7 +413,6 @@ export class GameScene extends Phaser.Scene {
       state.playerCount,
       state.aiCount,
       result.winner,
-      result.capturedCount,
     );
     this.render({
       revealAi: false,
@@ -616,14 +615,9 @@ export class GameScene extends Phaser.Scene {
     });
     this.cameras.main.shake(130, 0.006);
 
-    const destination = result.winner === 'player'
-      ? { x: GAME_LAYOUT.playerDeckX, y: GAME_LAYOUT.deckY + 70 }
-      : result.winner === 'ai'
-        ? { x: GAME_LAYOUT.aiDeckX, y: GAME_LAYOUT.deckY + 70 }
-        : { x: GAME_LAYOUT.width / 2, y: 620 };
-    const cards = [this.playerCardView, this.aiCardView].filter(
-      (card): card is Phaser.GameObjects.Container => Boolean(card),
-    );
+    const cards: Array<{ card: Phaser.GameObjects.Container; owner: Side }> = [];
+    if (this.playerCardView) cards.push({ card: this.playerCardView, owner: 'player' });
+    if (this.aiCardView) cards.push({ card: this.aiCardView, owner: 'ai' });
 
     if (cards.length === 0) {
       this.finishCardTransfer(state);
@@ -631,11 +625,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     let completedCards = 0;
-    cards.forEach((card, index) => {
+    cards.forEach(({ card, owner }, index) => {
+      const recipient = getCardTransferRecipient(owner, result.winner);
+      const destination = recipient === 'player'
+        ? { x: GAME_LAYOUT.playerDeckX, y: GAME_LAYOUT.deckY + 70 }
+        : { x: GAME_LAYOUT.aiDeckX, y: GAME_LAYOUT.deckY + 70 };
       const startX = card.x;
       const startY = card.y;
       const controlX = (startX + destination.x) / 2;
-      const controlY = result.winner === 'tie' ? 560 : 610;
+      const controlY = 610;
       const finalRotation = destination.x < startX ? -0.42 : 0.42;
 
       this.tweens.addCounter({
@@ -689,17 +687,23 @@ export class GameScene extends Phaser.Scene {
         ? this.aiDeckView
         : undefined;
 
-    if (receivingDeck) {
+    const pulseDeck = (deck: Phaser.GameObjects.Container): void => {
       this.tweens.add({
-        targets: receivingDeck,
+        targets: deck,
         scaleX: 1.1,
         scaleY: 1.1,
         duration: 170,
         ease: 'Back.Out',
         yoyo: true,
       });
-    } else if (tied) {
+    };
+
+    if (tied) {
+      if (this.playerDeckView) pulseDeck(this.playerDeckView);
+      if (this.aiDeckView) pulseDeck(this.aiDeckView);
       this.cameras.main.flash(120, 98, 217, 200, false);
+    } else if (receivingDeck) {
+      pulseDeck(receivingDeck);
     }
 
     const cards: Array<{ view: Phaser.GameObjects.Container; owner: Side }> = [];
@@ -752,11 +756,7 @@ export class GameScene extends Phaser.Scene {
   private drawTransferStatus(state: GameSnapshot): void {
     const result = state.lastResult;
     if (!result) return;
-    const destination = result.winner === 'player'
-      ? 'YOUR DECK'
-      : result.winner === 'ai'
-        ? 'AI DECK'
-        : 'POT';
+    const destination = result.winner === 'player' ? 'YOUR DECK' : 'AI DECK';
     const color = result.winner === 'player'
       ? COLORS.player
       : result.winner === 'ai'
@@ -765,7 +765,10 @@ export class GameScene extends Phaser.Scene {
     const panel = this.add.rectangle(640, 630, 310, 52, COLORS.panel, 0.96)
       .setStrokeStyle(2, color);
     this.ui.add(panel);
-    this.addUiText(640, 630, `CARDS  →  ${destination}`, 16, color).setOrigin(0.5);
+    const message = result.winner === 'tie'
+      ? 'EACH CARD  →  OWN DECK'
+      : `CARDS  →  ${destination}`;
+    this.addUiText(640, 630, message, 16, color).setOrigin(0.5);
   }
 
   private drawDealStatus(): void {
@@ -780,7 +783,7 @@ export class GameScene extends Phaser.Scene {
     if (!result) return;
 
     const resultText = result.winner === 'tie'
-      ? 'TIE // CARDS TO POT'
+      ? 'TIE // KEEP YOUR CARDS'
       : result.winner === 'player'
         ? `YOU WIN // +${result.capturedCount}`
         : `AI WINS // +${result.capturedCount}`;
