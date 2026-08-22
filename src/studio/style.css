@@ -101,9 +101,12 @@ h1 em { color: var(--coral); font-family: 'Fraunces', Georgia, serif; font-weigh
 }
 .status-pill[data-status="redo-requested"] { color: #98513f; background: #f6dfd7; }
 .status-pill[data-status="approved"] { color: #28673f; background: #dcebdc; }
-.image-pair { display: grid; grid-template-columns: .78fr 1.22fr; align-items: stretch; gap: 15px; }
-figure { min-width: 0; margin: 0; position: relative; overflow: hidden; border-radius: 16px; background: #dbd8cf; }
-figure img { display: block; width: 100%; height: clamp(355px, 46vw, 505px); object-fit: cover; }
+.image-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 15px; }
+figure {
+  min-width: 0; margin: 0; position: relative; aspect-ratio: 318 / 448; overflow: hidden;
+  border-radius: 16px; background: #dbd8cf;
+}
+figure img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .candidate-frame { box-shadow: 0 18px 40px rgba(16,43,42,.17); }
 figcaption {
   position: absolute; left: 11px; bottom: 11px; padding: 6px 9px; border-radius: 99px; color: white;
@@ -176,5 +179,5 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .review-grid { display: block; }
   .visual-review, .review-controls { padding: 22px 16px; }
   .image-pair { grid-template-columns: 1fr 1fr; gap: 9px; }
-  figure img { height: 330px; }
+  figure img { height: 100%; }
 }

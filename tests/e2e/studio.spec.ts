@@ -16,6 +16,11 @@ test('shows a safe read-only curation showcase on the public site', async ({ pag
   await expect(concept).toBeVisible();
   await expect(original).toHaveJSProperty('complete', true);
   await expect(concept).toHaveJSProperty('complete', true);
+  const conceptRatio = await concept.evaluate((image) => {
+    const bounds = image.getBoundingClientRect();
+    return bounds.width / bounds.height;
+  });
+  expect(conceptRatio).toBeCloseTo(318 / 448, 2);
 
   await expect(page.getByText('The reference stays local. Only approved art enters the game.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve card' })).toBeDisabled();
