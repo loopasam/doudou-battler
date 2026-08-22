@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_SNAKE_OFFSETS,
   BATTLE_TENSION_POSES,
+  CARD_ARTWORK_LAYOUT,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
@@ -22,6 +23,15 @@ import {
 } from './rendering';
 
 describe('wireframe rendering metrics', () => {
+  it('keeps the artwork window inside the card', () => {
+    expect(CARD_ARTWORK_LAYOUT.width).toBeLessThan(CARD_LAYOUT.width);
+    expect(CARD_ARTWORK_LAYOUT.height).toBeLessThan(CARD_LAYOUT.height);
+    expect(Math.abs(CARD_ARTWORK_LAYOUT.centerX) + CARD_ARTWORK_LAYOUT.width / 2)
+      .toBeLessThanOrEqual(CARD_LAYOUT.width / 2);
+    expect(Math.abs(CARD_ARTWORK_LAYOUT.centerY) + CARD_ARTWORK_LAYOUT.height / 2)
+      .toBeLessThanOrEqual(CARD_LAYOUT.height / 2);
+  });
+
   it('keeps every stat row within the card border', () => {
     expect(getStatRowCenter(0)).toBe(61);
     expect(getLastStatRowBottom()).toBeLessThanOrEqual(CARD_LAYOUT.height / 2 - 10);

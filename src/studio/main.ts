@@ -1,4 +1,5 @@
 import './style.css';
+import { CARD_ARTWORK_LAYOUT, CARD_LAYOUT } from '../game/rendering';
 import {
   getQueueProgress,
   getSelectedArt,
@@ -97,7 +98,12 @@ async function postAction(itemId: string, payload: Record<string, unknown>, succ
   render();
 }
 
-function renderArtCandidates(container: HTMLElement, item: CurationItem, preview: HTMLImageElement, caption: HTMLElement) {
+function renderArtCandidates(
+  container: HTMLElement,
+  item: CurationItem,
+  previews: HTMLImageElement[],
+  caption: HTMLElement,
+) {
   container.replaceChildren();
   item.artCandidates.forEach((candidate, index) => {
     const button = document.createElement('button');
@@ -113,7 +119,9 @@ function renderArtCandidates(container: HTMLElement, item: CurationItem, preview
     number.textContent = String(index + 1).padStart(2, '0');
     button.append(image, number);
     button.addEventListener('click', () => {
-      preview.src = candidate.url;
+      previews.forEach((preview) => {
+        preview.src = candidate.url;
+      });
       caption.textContent = `Candidate ${String(index + 1).padStart(2, '0')}`;
       void postAction(item.id, { action: 'select-art', candidateId: candidate.id }, 'Artwork selection saved.')
         .catch(showError);
@@ -169,6 +177,9 @@ function renderWorkspace(item: CurationItem) {
   const status = required<HTMLElement>('[data-item-status]', fragment);
   const referenceImage = required<HTMLImageElement>('[data-reference-image]', fragment);
   const candidateImage = required<HTMLImageElement>('[data-candidate-image]', fragment);
+  const cardPreview = required<HTMLElement>('[data-card-preview]', fragment);
+  const cardArt = required<HTMLImageElement>('[data-card-art]', fragment);
+  const cardName = required<HTMLElement>('[data-card-name]', fragment);
   const candidateCaption = required<HTMLElement>('[data-candidate-caption]', fragment);
   const form = required<HTMLFormElement>('[data-details-form]', fragment);
   const selectedArt = getSelectedArt(item);
@@ -180,10 +191,26 @@ function renderWorkspace(item: CurationItem) {
   referenceImage.alt = `${item.name} toy reference`;
   candidateImage.src = selectedArt?.url ?? item.referenceUrl;
   candidateImage.alt = `${item.name} generated storybook artwork`;
+  cardArt.src = selectedArt?.url ?? item.referenceUrl;
+  cardArt.alt = `${item.name} artwork inside the game card`;
+  cardName.textContent = item.name;
+  const artLeft = (CARD_LAYOUT.width / 2 + CARD_ARTWORK_LAYOUT.centerX - CARD_ARTWORK_LAYOUT.width / 2)
+    / CARD_LAYOUT.width * 100;
+  const artTop = (CARD_LAYOUT.height / 2 + CARD_ARTWORK_LAYOUT.centerY - CARD_ARTWORK_LAYOUT.height / 2)
+    / CARD_LAYOUT.height * 100;
+  cardPreview.style.setProperty('--art-left', `${artLeft}%`);
+  cardPreview.style.setProperty('--art-top', `${artTop}%`);
+  cardPreview.style.setProperty('--art-width', `${CARD_ARTWORK_LAYOUT.width / CARD_LAYOUT.width * 100}%`);
+  cardPreview.style.setProperty('--art-height', `${CARD_ARTWORK_LAYOUT.height / CARD_LAYOUT.height * 100}%`);
   const selectedIndex = Math.max(0, item.artCandidates.findIndex(({ id }) => id === selectedArt?.id));
   candidateCaption.textContent = selectedArt ? `Candidate ${String(selectedIndex + 1).padStart(2, '0')}` : 'Awaiting artwork';
 
-  renderArtCandidates(required('[data-art-candidates]', fragment), item, candidateImage, candidateCaption);
+  renderArtCandidates(
+    required('[data-art-candidates]', fragment),
+    item,
+    [candidateImage, cardArt],
+    candidateCaption,
+  );
   renderSoundCandidates(required('[data-win-sounds]', fragment), item, 'win');
   renderSoundCandidates(required('[data-lose-sounds]', fragment), item, 'lose');
 

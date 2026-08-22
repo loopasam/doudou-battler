@@ -20,7 +20,17 @@ test('shows a safe read-only curation showcase on the public site', async ({ pag
     const bounds = image.getBoundingClientRect();
     return bounds.width / bounds.height;
   });
-  expect(conceptRatio).toBeCloseTo(318 / 448, 2);
+  expect(conceptRatio).toBeCloseTo(268 / 162, 2);
+
+  const cardPreview = page.locator('[data-card-preview]');
+  const cardArt = page.getByAltText('Fort Knight artwork inside the game card');
+  await expect(cardPreview).toBeVisible();
+  await expect(cardArt).toBeVisible();
+  const cardRatio = await cardPreview.evaluate((card) => {
+    const bounds = card.getBoundingClientRect();
+    return bounds.width / bounds.height;
+  });
+  expect(cardRatio).toBeCloseTo(318 / 448, 2);
 
   await expect(page.getByText('The reference stays local. Only approved art enters the game.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve card' })).toBeDisabled();

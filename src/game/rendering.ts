@@ -7,6 +7,13 @@ export const CARD_LAYOUT = {
   statRowCount: 3,
 } as const;
 
+export const CARD_ARTWORK_LAYOUT = {
+  width: 268,
+  height: 162,
+  centerX: 0,
+  centerY: -92,
+} as const;
+
 export const GAME_LAYOUT = {
   width: 1280,
   height: 720,

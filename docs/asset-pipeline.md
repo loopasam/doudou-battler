@@ -19,7 +19,7 @@ the private local review queue.
 2. Generate artwork with the built-in image tool using the style anchor and the prompt version in
    `asset-workbench/manifest.json`.
 3. Register each candidate:
-   `npm run assets:candidate -- --id <slug> --source <generated-image> --prompt-version storybook-fort-v1`
+   `npm run assets:candidate -- --id <slug> --source <generated-image> --prompt-version picture-book-landscape-v2`
 4. Generate the initial win and lose sound pair:
    `npm run assets:sounds -- --id <slug>`
    For a voiced character, render or record the two WAV files, then register them with:
@@ -32,10 +32,12 @@ the private local review queue.
 
 ## Style lock
 
-Current style ID and prompt version: `storybook-fort-v1`.
+Current production candidate: `picture-book-landscape-v2`.
 
-Every prompt uses the original photo only as a subject reference and uses the Fort Knight concept
-as the collection style anchor. Images are vertical, full-character, centered, card-safe,
-kid-friendly, tactile storybook portraits with warm blanket-fort lighting and no text or logos.
+Every prompt uses the original photo only as a subject reference and a selected deck illustration
+as the collection style anchor. Images are close, landscape character portraits composed directly
+for the game's `268 × 162` artwork window. The recommended master size is `1072 × 648`. Critical
+facial and silhouette details remain inside the inner 80% safe zone. Artwork stays kid-friendly,
+tactile, softly painted, and free of text, logos, card borders, and other UI.
 
 Changing the style requires a new version rather than silently editing the existing prompt.

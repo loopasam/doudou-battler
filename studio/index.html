@@ -57,12 +57,35 @@
             <div><p class="section-kicker">Visual review</p><h2 data-item-name></h2></div>
             <span class="status-pill" data-item-status></span>
           </div>
-          <div class="image-pair">
-            <figure><img data-reference-image alt="Toy reference" /><figcaption>Private reference</figcaption></figure>
-            <figure class="candidate-frame"><img data-candidate-image alt="Generated card artwork" /><figcaption data-candidate-caption>Candidate</figcaption></figure>
+          <div class="preview-layout">
+            <div class="artwork-comparison">
+              <p class="format-note"><strong>Artwork crop</strong><span>268 × 162 · exact game ratio</span></p>
+              <div class="image-pair">
+                <figure class="artwork-frame"><img data-reference-image alt="Toy reference" /><figcaption>Private reference</figcaption></figure>
+                <figure class="artwork-frame candidate-frame"><img data-candidate-image alt="Generated card artwork" /><figcaption data-candidate-caption>Candidate</figcaption></figure>
+              </div>
+              <div class="candidate-picker" data-art-candidates aria-label="Artwork candidates"></div>
+              <p class="privacy-note"><span aria-hidden="true">◉</span> The reference stays local. Only approved art enters the game.</p>
+            </div>
+
+            <section class="card-context" aria-label="Artwork shown in the game card">
+              <div class="card-context-heading">
+                <p class="section-kicker">In-card preview</p>
+                <span>318 × 448</span>
+              </div>
+              <div class="game-card-preview" data-card-preview>
+                <div class="game-card-meta"><span>PLAYER CARD</span><span>01</span></div>
+                <div class="game-card-art"><img data-card-art alt="Artwork inside game card" /></div>
+                <strong class="game-card-name" data-card-name></strong>
+                <div class="game-card-stats" aria-label="Example characteristics">
+                  <div><span>STRENGTH</span><strong>50</strong></div>
+                  <div><span>SPEED</span><strong>50</strong></div>
+                  <div><span>AGILITY</span><strong>50</strong></div>
+                </div>
+              </div>
+              <p>The image above uses the exact artwork window from the game.</p>
+            </section>
           </div>
-          <div class="candidate-picker" data-art-candidates aria-label="Artwork candidates"></div>
-          <p class="privacy-note"><span aria-hidden="true">◉</span> The reference stays local. Only approved art enters the game.</p>
         </div>
 
         <aside class="review-controls">

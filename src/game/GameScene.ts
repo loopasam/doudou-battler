@@ -4,6 +4,7 @@ import { BattleEngine } from './engine';
 import {
   ACTIVE_SNAKE_OFFSETS,
   BATTLE_TENSION_POSES,
+  CARD_ARTWORK_LAYOUT,
   CARD_LAYOUT,
   GAME_TIMING,
   GAME_LAYOUT,
@@ -354,12 +355,36 @@ export class GameScene extends Phaser.Scene {
 
     const ownerLabel = this.makeText(-132, -202, owner === 'player' ? 'PLAYER CARD' : 'AI CARD', 13, COLORS.ink);
     const idLabel = this.makeText(132, -202, card.id.slice(-2), 13, COLORS.ink).setOrigin(1, 0);
-    const artBox = this.add.rectangle(0, -92, 268, 162, 0xddd7c9).setStrokeStyle(2, COLORS.ink);
+    const artBox = this.add.rectangle(
+      CARD_ARTWORK_LAYOUT.centerX,
+      CARD_ARTWORK_LAYOUT.centerY,
+      CARD_ARTWORK_LAYOUT.width,
+      CARD_ARTWORK_LAYOUT.height,
+      0xddd7c9,
+    ).setStrokeStyle(2, COLORS.ink);
     const cross = this.add.graphics();
     cross.lineStyle(2, COLORS.muted, 0.8);
-    cross.lineBetween(-134, -173, 134, -11);
-    cross.lineBetween(134, -173, -134, -11);
-    const prototype = this.makeText(0, -92, 'ARTWORK\nPLACEHOLDER', 18, COLORS.ink)
+    const artHalfWidth = CARD_ARTWORK_LAYOUT.width / 2;
+    const artHalfHeight = CARD_ARTWORK_LAYOUT.height / 2;
+    cross.lineBetween(
+      CARD_ARTWORK_LAYOUT.centerX - artHalfWidth,
+      CARD_ARTWORK_LAYOUT.centerY - artHalfHeight,
+      CARD_ARTWORK_LAYOUT.centerX + artHalfWidth,
+      CARD_ARTWORK_LAYOUT.centerY + artHalfHeight,
+    );
+    cross.lineBetween(
+      CARD_ARTWORK_LAYOUT.centerX + artHalfWidth,
+      CARD_ARTWORK_LAYOUT.centerY - artHalfHeight,
+      CARD_ARTWORK_LAYOUT.centerX - artHalfWidth,
+      CARD_ARTWORK_LAYOUT.centerY + artHalfHeight,
+    );
+    const prototype = this.makeText(
+      CARD_ARTWORK_LAYOUT.centerX,
+      CARD_ARTWORK_LAYOUT.centerY,
+      'ARTWORK\nPLACEHOLDER',
+      18,
+      COLORS.ink,
+    )
       .setOrigin(0.5)
       .setAlign('center');
     const name = this.makeText(-134, 4, card.name, 24, COLORS.ink);
