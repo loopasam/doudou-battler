@@ -139,6 +139,65 @@ function wavBuffer(samples, sampleRate = 44100) {
   return buffer;
 }
 
+function normalizePcmWav(buffer) {
+  if (buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WAVE') {
+    throw new Error('Custom reaction sounds must be WAV files.');
+  }
+  let cursor = 12;
+  let format;
+  let pcm;
+  while (cursor + 8 <= buffer.length) {
+    const chunkId = buffer.toString('ascii', cursor, cursor + 4);
+    const chunkSize = buffer.readUInt32LE(cursor + 4);
+    const chunkStart = cursor + 8;
+    if (chunkStart + chunkSize > buffer.length) break;
+    if (chunkId === 'fmt ') {
+      format = {
+        audioFormat: buffer.readUInt16LE(chunkStart),
+        channels: buffer.readUInt16LE(chunkStart + 2),
+        sampleRate: buffer.readUInt32LE(chunkStart + 4),
+        bitsPerSample: buffer.readUInt16LE(chunkStart + 14),
+      };
+    }
+    if (chunkId === 'data') pcm = buffer.subarray(chunkStart, chunkStart + chunkSize);
+    cursor = chunkStart + chunkSize + (chunkSize % 2);
+  }
+  if (!format || !pcm || format.audioFormat !== 1 || format.channels !== 1 || format.bitsPerSample !== 16) {
+    throw new Error('Custom reaction sounds must use 16-bit mono PCM WAV format.');
+  }
+  const targetSampleRate = 44100;
+  let normalizedPcm = pcm;
+  if (format.sampleRate !== targetSampleRate) {
+    const sourceFrames = pcm.length / 2;
+    const targetFrames = Math.round(sourceFrames * targetSampleRate / format.sampleRate);
+    normalizedPcm = Buffer.alloc(targetFrames * 2);
+    for (let frame = 0; frame < targetFrames; frame += 1) {
+      const sourcePosition = frame * format.sampleRate / targetSampleRate;
+      const leftIndex = Math.min(sourceFrames - 1, Math.floor(sourcePosition));
+      const rightIndex = Math.min(sourceFrames - 1, leftIndex + 1);
+      const blend = sourcePosition - leftIndex;
+      const left = pcm.readInt16LE(leftIndex * 2);
+      const right = pcm.readInt16LE(rightIndex * 2);
+      normalizedPcm.writeInt16LE(Math.round(left + (right - left) * blend), frame * 2);
+    }
+  }
+  const normalized = Buffer.alloc(44 + normalizedPcm.length);
+  writeAscii(normalized, 0, 'RIFF');
+  normalized.writeUInt32LE(36 + normalizedPcm.length, 4);
+  writeAscii(normalized, 8, 'WAVEfmt ');
+  normalized.writeUInt32LE(16, 16);
+  normalized.writeUInt16LE(1, 20);
+  normalized.writeUInt16LE(1, 22);
+  normalized.writeUInt32LE(targetSampleRate, 24);
+  normalized.writeUInt32LE(targetSampleRate * 2, 28);
+  normalized.writeUInt16LE(2, 32);
+  normalized.writeUInt16LE(16, 34);
+  writeAscii(normalized, 36, 'data');
+  normalized.writeUInt32LE(normalizedPcm.length, 40);
+  normalizedPcm.copy(normalized, 44);
+  return normalized;
+}
+
 function makeReaction(kind) {
   const sampleRate = 44100;
   const notes = kind === 'win' ? [523.25, 659.25, 783.99, 1046.5] : [392, 349.23, 293.66];
@@ -165,20 +224,43 @@ async function sounds(options) {
   const item = findItem(manifest, id);
   const cardDirectory = resolve(workbenchRoot, 'cards', id);
   await mkdir(cardDirectory, { recursive: true });
+  const winSource = typeof options['win-source'] === 'string' ? resolve(options['win-source']) : undefined;
+  const loseSource = typeof options['lose-source'] === 'string' ? resolve(options['lose-source']) : undefined;
+  if (Boolean(winSource) !== Boolean(loseSource)) {
+    throw new Error('Provide both --win-source and --lose-source, or neither.');
+  }
+  const profile = typeof options.profile === 'string' ? options.profile : 'gentle-magic-v1';
 
   for (const kind of ['win', 'lose']) {
     const listName = `${kind}SoundCandidates`;
     const candidateId = `${kind}-${String(item[listName].length + 1).padStart(2, '0')}`;
     const file = `${candidateId}.wav`;
-    await writeFile(resolve(cardDirectory, file), makeReaction(kind));
-    item[listName].push({ id: candidateId, file, profile: 'gentle-magic-v1', createdAt: now() });
+    const source = kind === 'win' ? winSource : loseSource;
+    if (source) {
+      await writeFile(resolve(cardDirectory, file), normalizePcmWav(await readFile(source)));
+    }
+    else await writeFile(resolve(cardDirectory, file), makeReaction(kind));
+    item[listName].push({ id: candidateId, file, profile, createdAt: now() });
     const selectionName = kind === 'win' ? 'selectedWinSoundId' : 'selectedLoseSoundId';
     item[selectionName] ??= candidateId;
   }
   if (item.artCandidates.length) item.status = 'review';
   item.updatedAt = now();
   await saveManifest(manifest);
-  console.log(`Created gentle win and lose sounds for ${id}.`);
+  console.log(`${winSource ? 'Registered custom' : 'Created gentle'} win and lose sounds for ${id}.`);
+}
+
+async function normalizeSounds(options) {
+  const id = requireOption(options, 'id');
+  assertSlug(id);
+  const manifest = await readManifest();
+  const item = findItem(manifest, id);
+  const candidates = [...item.winSoundCandidates, ...item.loseSoundCandidates];
+  for (const candidate of candidates) {
+    const path = resolve(workbenchRoot, 'cards', id, candidate.file);
+    await writeFile(path, normalizePcmWav(await readFile(path)));
+  }
+  console.log(`Normalized ${candidates.length} sound files for ${id}.`);
 }
 
 async function status() {
@@ -201,13 +283,16 @@ const { positionals, values } = parseArgs({
     name: { type: 'string' },
     notes: { type: 'string' },
     'prompt-version': { type: 'string' },
+    'win-source': { type: 'string' },
+    'lose-source': { type: 'string' },
+    profile: { type: 'string' },
   },
 });
 
-const commands = { intake, candidate, sounds, status };
+const commands = { intake, candidate, sounds, 'normalize-sounds': normalizeSounds, status };
 const command = positionals[0];
 if (!commands[command]) {
-  console.error('Usage: node scripts/asset-pipeline.mjs <intake|candidate|sounds|status> [options]');
+  console.error('Usage: node scripts/asset-pipeline.mjs <intake|candidate|sounds|normalize-sounds|status> [options]');
   process.exitCode = 1;
 } else {
   await commands[command](values);

@@ -22,6 +22,8 @@ the private local review queue.
    `npm run assets:candidate -- --id <slug> --source <generated-image> --prompt-version storybook-fort-v1`
 4. Generate the initial win and lose sound pair:
    `npm run assets:sounds -- --id <slug>`
+   For a voiced character, render or record the two WAV files, then register them with:
+   `npm run assets:sounds -- --id <slug> --win-source <win.wav> --lose-source <lose.wav> --profile <voice-version>`
 5. Start the local studio with `npm run dev`, then open `/doudou-battler/studio/`.
 6. The curator selects artwork and sounds, adds notes, then either approves or requests a redo.
 7. Approval promotes final files into `public/assets/cards/<slug>/` and updates the public manifest.

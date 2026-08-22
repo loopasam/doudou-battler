@@ -50,7 +50,8 @@ async function bodyAsJson(request: IncomingMessage): Promise<JsonRecord> {
 function queueForBrowser(manifest: JsonRecord) {
   const items = (manifest.items as JsonRecord[] ?? []).map((item) => {
     const id = String(item.id);
-    const urlFor = (file: unknown) => `${basePath}/api/curation/assets/${id}/${String(file)}`;
+    const version = encodeURIComponent(String(item.updatedAt ?? 'draft'));
+    const urlFor = (file: unknown) => `${basePath}/api/curation/assets/${id}/${String(file)}?v=${version}`;
     const withUrl = (candidate: JsonRecord) => ({
       id: candidate.id,
       url: urlFor(candidate.file),
@@ -200,7 +201,30 @@ export function createCurationPlugin(projectRoot: string): Plugin {
             const contentType = contentTypes[extname(file).toLowerCase()];
             if (!contentType) return sendJson(response, 415, { error: 'Unsupported asset type.' });
             const content = await readFile(resolve(workbenchRoot, 'cards', id, file));
-            response.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+            const range = request.headers.range?.match(/^bytes=(\d*)-(\d*)$/);
+            if (range) {
+              const start = range[1] ? Number(range[1]) : 0;
+              const end = range[2] ? Math.min(Number(range[2]), content.length - 1) : content.length - 1;
+              if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start > end) {
+                response.writeHead(416, { 'Content-Range': `bytes */${content.length}` });
+                return response.end();
+              }
+              const slice = content.subarray(start, end + 1);
+              response.writeHead(206, {
+                'Content-Type': contentType,
+                'Content-Length': slice.length,
+                'Content-Range': `bytes ${start}-${end}/${content.length}`,
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-store',
+              });
+              return response.end(slice);
+            }
+            response.writeHead(200, {
+              'Content-Type': contentType,
+              'Content-Length': content.length,
+              'Accept-Ranges': 'bytes',
+              'Cache-Control': 'no-store',
+            });
             return response.end(content);
           }
 
